@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Duck Hunt 3D - Super Pato Dourado & Leaderboard Firebase</title>
+  <title>Duck Hunt Arcade 3D - Super Pato & Leaderboard Firebase</title>
   
   <!-- SEO & Meta Tags -->
-  <meta name="description" content="Jogo Arcade 3D Duck Hunt com suporte a Mobile Touch, Super Pato Dourado, Cão Bob e Ranking Online via Firebase.">
+  <meta name="description" content="Jogo Arcade 3D Duck Hunt online e responsivo com controles PC e Celular (D-Pad Touch), Ondas de Inimigos e Ranking Top 10 via Firebase.">
   <meta name="theme-color" content="#78c7f7">
 
   <!-- Estilos e Fontes -->
@@ -29,7 +29,7 @@
   <!-- Crosshair (Mira) -->
   <div id="crosshair"></div>
 
-  <!-- Notificação Central de Power-up -->
+  <!-- Notificação Central de Power-up / Onda -->
   <div id="powerup-notice">POWER UP!</div>
 
   <!-- HUD Interface -->
@@ -40,13 +40,18 @@
         <div class="stat-value" id="score-val">0</div>
       </div>
       <div class="stat-card">
+        <div class="stat-label">Onda (Wave)</div>
+        <div class="stat-value" id="wave-val">1</div>
+      </div>
+      <div class="stat-card">
         <div class="stat-label">Tempo Restante</div>
         <div class="stat-value" id="timer-val">60s</div>
       </div>
+      <button id="pause-btn" class="btn-pause" title="Pausar Jogo">⏸️ PAUSA</button>
     </div>
 
     <div class="bottom-bar">
-      <div class="stat-card">
+      <div class="stat-card ammo-card">
         <div class="stat-label" style="margin-bottom: 6px;">Cartuchos (R)</div>
         <div class="ammo-container" id="ammo-box">
           <div class="shell"></div>
@@ -56,35 +61,76 @@
         </div>
       </div>
 
-      <!-- Controles Virtuais para Mobile/Touch -->
+      <!-- CONTROLES VIRTUAIS TOUCH (MODO CELULAR) -->
       <div id="touch-controls">
-        <button id="touch-reload-btn" class="touch-btn touch-btn-reload" title="Recarregar Espingarda">
-          🔄
-          <span>RECARGAR</span>
-        </button>
-        <button id="touch-fire-btn" class="touch-btn" title="Atirar">
-          🎯
-          <span>ATIRAR</span>
-        </button>
+        <!-- Direcional Digital (D-Pad Virtual) - Canto Inferior Esquerdo -->
+        <div id="dpad-container" class="dpad-wrapper">
+          <button id="dpad-up" class="dpad-btn dpad-up" title="Mover para Cima">▲</button>
+          <button id="dpad-left" class="dpad-btn dpad-left" title="Mover para Esquerda">◄</button>
+          <div class="dpad-center">●</div>
+          <button id="dpad-right" class="dpad-btn dpad-right" title="Mover para Direita">►</button>
+          <button id="dpad-down" class="dpad-btn dpad-down" title="Mover para Baixo">▼</button>
+        </div>
+
+        <!-- Botões de Ação (Tiro e Recarga) - Canto Inferior Direito -->
+        <div id="touch-action-buttons" class="touch-actions-wrapper">
+          <button id="touch-reload-btn" class="touch-btn touch-btn-reload" title="Recarregar Espingarda">
+            🔄
+            <span>RECARREGAR</span>
+          </button>
+          <button id="touch-fire-btn" class="touch-btn touch-btn-fire" title="Atirar">
+            🎯
+            <span>ATIRAR</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Screen Overlay (Start / Game Over / Leaderboard) -->
-  <div id="screen-overlay">
-    <h1 class="arcade-title" id="title-text">DUCK HUNT 3D</h1>
+  <!-- Modal de Pausa -->
+  <div id="pause-overlay" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <h2 class="arcade-title" style="font-size: 26px; color: #ffeb3b;">⏸️ JOGO PAUSADO</h2>
+      <p style="margin-bottom: 20px; color: #ddd; font-size: 13px;">Selecione uma das opções abaixo:</p>
+      <div class="modal-buttons">
+        <button id="resume-btn" class="btn-primary">▶️ CONTINUAR</button>
+        <button id="restart-btn" class="btn-secondary">🔄 REINICIAR PARTIDA</button>
+        <button id="change-mode-btn" class="btn-secondary">📱/💻 ALTERAR CONTROLES</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen Overlay (Seleção de Plataforma / Start / Game Over / Leaderboard) -->
+  <div id="screen-overlay" class="modal-overlay">
+    <h1 class="arcade-title" id="title-text">DUCK HUNT ARCADE 3D</h1>
     
     <p class="arcade-desc" id="desc-text">
-      Mire e atire nos patos! Sua espingarda possui <b>4 Cartuchos</b>.<br>
+      Escolha como deseja jogar e enfrente ondas progressivas de patos!<br>
       🟢 <b>Comum</b> (+10 pts) | 🔵 <b>Veloz</b> (+25 pts) | 🟡 <b>Dourado</b> (+50 pts | +5s)<br>
-      👑 <b>Super Pato Dourado</b> (+100 pts | Respawn após 700 pts): Ativa a <b>Super Velocidade do Cão Bob</b>!<br>
-      <i>Pressione <b>'R'</b> no teclado ou o botão <b>RECARGAR</b> para abastecer.</i>
+      👑 <b>Super Pato Dourado</b> (+100 pts): Ativa a <b>Super Velocidade do Cão Bob</b>!<br>
     </p>
+
+    <!-- SELEÇÃO DE PLATAFORMA (Menu Inicial) -->
+    <div id="platform-selection-group" class="platform-selection-container">
+      <div class="selection-label">COMO VOCÊ DESEJA JOGAR?</div>
+      <div class="platform-buttons-row">
+        <button id="btn-mode-pc" class="btn-platform btn-pc">
+          <span class="icon">💻</span>
+          <span class="text">JOGAR NO COMPUTADOR</span>
+          <span class="subtext">Teclado (WASD / Setas / R / Espaço) & Mouse</span>
+        </button>
+        <button id="btn-mode-mobile" class="btn-platform btn-mobile">
+          <span class="icon">📱</span>
+          <span class="text">JOGAR NO CELULAR</span>
+          <span class="subtext">D-Pad Virtual Touch & Botões de Ação</span>
+        </button>
+      </div>
+    </div>
 
     <!-- Formulário de Registro no Game Over (Iniciais / Nome) -->
     <div id="name-input-group">
       <label for="player-name-input" style="font-size: 12px; color: #ffeb3b; text-transform: uppercase; font-weight: bold; text-align: center;">
-        DIGITE SUAS 3 INICIAIS PARA O RECORDES ARCADE:
+        DIGITE SUAS 3 INICIAIS PARA O RANKING ARCADE:
       </label>
       <input type="text" id="player-name-input" class="name-input" maxlength="3" placeholder="PATO" value="BOB" autocomplete="off">
     </div>
@@ -101,7 +147,7 @@
       </div>
     </div>
 
-    <button id="start-btn" class="btn-primary">INICIAR CAÇADA</button>
+    <button id="start-btn" class="btn-primary" style="display: none;">INICIAR CAÇADA</button>
   </div>
 
   <!-- Game Engine (Module) -->

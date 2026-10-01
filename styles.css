@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DUCK HUNT 3D - STYLESHEET (CSS3 RESPONSIVO E TEMÁTICA ARCADE NEON)
+   DUCK HUNT ARCADE 3D - STYLESHEET (CSS3 RESPONSIVO & TEMÁTICA ARCADE NEON)
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Press+Start+2P&display=swap');
@@ -9,8 +9,9 @@
   --secondary-color: #e74c3c;
   --accent-gold: #ffd700;
   --super-magenta: #ff007f;
-  --bg-overlay: rgba(10, 15, 30, 0.85);
-  --panel-bg: rgba(20, 25, 45, 0.75);
+  --neon-blue: #00d2ff;
+  --bg-overlay: rgba(10, 15, 30, 0.88);
+  --panel-bg: rgba(20, 25, 45, 0.82);
   --neon-glow: 0 0 12px rgba(255, 235, 59, 0.6);
   --font-arcade: 'Press Start 2P', monospace;
   --font-ui: 'Orbitron', sans-serif;
@@ -52,8 +53,8 @@ html, body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 10;
@@ -65,16 +66,16 @@ html, body {
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.8), 0 0 10px var(--primary-color);
 }
 #crosshair::before {
-  top: 11px;
+  top: 12px;
   left: 0;
-  width: 24px;
+  width: 26px;
   height: 2px;
 }
 #crosshair::after {
   top: 0;
-  left: 11px;
+  left: 12px;
   width: 2px;
-  height: 24px;
+  height: 26px;
 }
 
 /* HUD Superior e Inferior */
@@ -95,53 +96,80 @@ html, body {
 .top-bar {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 15px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .stat-card {
   background: var(--panel-bg);
   backdrop-filter: blur(10px);
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  min-width: 120px;
+  min-width: 110px;
+  text-align: center;
 }
 
 .stat-label {
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   color: #aaa;
   font-weight: 700;
   margin-bottom: 2px;
 }
 
 .stat-value {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 900;
   color: var(--primary-color);
   text-shadow: 0 0 8px rgba(255, 235, 59, 0.5);
+}
+
+.btn-pause {
+  pointer-events: auto;
+  background: rgba(231, 76, 60, 0.8);
+  border: 2px solid #e74c3c;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  transition: all 0.2s ease;
+}
+.btn-pause:hover, .btn-pause:active {
+  transform: scale(1.05);
+  background: #c0392b;
 }
 
 .bottom-bar {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  width: 100%;
+}
+
+.ammo-card {
+  pointer-events: auto;
 }
 
 /* Cartuchos de Espingarda */
 .ammo-container {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
+  justify-content: center;
 }
 
 .shell {
-  width: 18px;
-  height: 44px;
+  width: 16px;
+  height: 40px;
   background: linear-gradient(to right, #e74c3c, #c0392b);
   border: 2px solid #900c3f;
   border-radius: 3px;
@@ -156,7 +184,7 @@ html, body {
   top: 0;
   left: 0;
   width: 100%;
-  height: 9px;
+  height: 8px;
   background: linear-gradient(to right, #f1c40f, #d4ac0d);
   border-bottom: 1px solid #b7950b;
 }
@@ -166,13 +194,13 @@ html, body {
   transform: scale(0.85) translateY(4px);
 }
 
-/* Notificação de Power-up Central */
+/* Notificação de Power-up / Onda Central */
 #powerup-notice {
   position: absolute;
-  top: 35%;
+  top: 32%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 900;
   color: var(--accent-gold);
   text-shadow: 0 0 15px rgba(255, 215, 0, 0.9), 0 4px 10px rgba(0,0,0,0.9);
@@ -182,30 +210,100 @@ html, body {
   z-index: 20;
   text-align: center;
   width: 90%;
-  max-width: 600px;
+  max-width: 650px;
 }
 
-/* Controles Virtuais Touch para Mobile */
+/* ==========================================================================
+   CONTROLES VIRTUAIS TOUCH (MODO CELULAR / MOBILE HUD)
+   ========================================================================== */
+
 #touch-controls {
   position: absolute;
-  bottom: 25px;
-  right: 20px;
-  display: none; /* Ativado via JS em dispositivos touch */
-  gap: 15px;
-  pointer-events: auto;
+  bottom: 15px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 20px;
+  pointer-events: none; /* Sub-elementos têm pointer-events: auto */
   z-index: 15;
 }
 
+/* D-PAD VIRTUAL (Canto Inferior Esquerdo) */
+.dpad-wrapper {
+  pointer-events: auto;
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  padding: 6px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.dpad-btn {
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.1s ease, transform 0.1s ease;
+}
+
+.dpad-btn:active, .dpad-btn.active {
+  background: rgba(255, 235, 59, 0.8);
+  color: #000;
+  transform: scale(0.92);
+  box-shadow: 0 0 10px var(--primary-color);
+}
+
+.dpad-up { grid-column: 2; grid-row: 1; border-radius: 12px 12px 4px 4px; }
+.dpad-left { grid-column: 1; grid-row: 2; border-radius: 12px 4px 4px 12px; }
+.dpad-center { 
+  grid-column: 2; 
+  grid-row: 2; 
+  background: rgba(0,0,0,0.5); 
+  border-radius: 50%; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  color: rgba(255,255,255,0.4);
+  font-size: 10px;
+}
+.dpad-right { grid-column: 3; grid-row: 2; border-radius: 4px 12px 12px 4px; }
+.dpad-down { grid-column: 2; grid-row: 3; border-radius: 4px 4px 12px 12px; }
+
+/* BOTÕES DE AÇÃO TOUCH (Canto Inferior Direito) */
+.touch-actions-wrapper {
+  pointer-events: auto;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
 .touch-btn {
-  width: 70px;
-  height: 70px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(8px);
   border: 2px solid rgba(255, 255, 255, 0.6);
   color: white;
-  font-size: 12px;
-  font-weight: bold;
+  font-size: 11px;
+  font-weight: 800;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -215,19 +313,29 @@ html, body {
   touch-action: manipulation;
 }
 
-.touch-btn:active {
+.touch-btn:active, .touch-btn.active {
   transform: scale(0.92);
-  background: rgba(255, 235, 59, 0.5);
+  background: rgba(255, 235, 59, 0.7);
   color: #000;
 }
 
 .touch-btn-reload {
-  background: rgba(231, 76, 60, 0.4);
-  border-color: rgba(231, 76, 60, 0.8);
+  background: rgba(231, 76, 60, 0.45);
+  border-color: rgba(231, 76, 60, 0.85);
 }
 
-/* Modal Overlay (Start / Game Over / Leaderboard) */
-#screen-overlay {
+.touch-btn-fire {
+  background: rgba(46, 204, 113, 0.45);
+  border-color: rgba(46, 204, 113, 0.85);
+  width: 80px;
+  height: 80px;
+}
+
+/* ==========================================================================
+   MODAIS E SELEÇÃO DE PLATAFORMA (OVERLAY)
+   ========================================================================== */
+
+.modal-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -245,9 +353,26 @@ html, body {
   overflow-y: auto;
 }
 
+.modal-box {
+  background: var(--panel-bg);
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+}
+
+.modal-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .arcade-title {
   font-family: var(--font-arcade);
-  font-size: 32px;
+  font-size: 28px;
   color: var(--primary-color);
   text-shadow: 0 0 15px rgba(255, 235, 59, 0.8), 4px 4px 0px #d35400;
   margin-bottom: 12px;
@@ -256,18 +381,90 @@ html, body {
 }
 
 .arcade-desc {
-  font-size: 14px;
+  font-size: 13px;
   color: #ddd;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   text-align: center;
   max-width: 580px;
   line-height: 1.6;
 }
 
+/* CONTAINER DE SELEÇÃO DE PLATAFORMA */
+.platform-selection-container {
+  width: 100%;
+  max-width: 580px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.selection-label {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--neon-blue);
+  letter-spacing: 1.5px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.platform-buttons-row {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-platform {
+  flex: 1;
+  min-width: 220px;
+  padding: 16px 14px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25 ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+}
+
+.btn-platform .icon {
+  font-size: 28px;
+}
+
+.btn-platform .text {
+  font-family: var(--font-ui);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.btn-platform .subtext {
+  font-size: 10px;
+  color: #aaa;
+}
+
+.btn-pc:hover, .btn-pc.active {
+  background: rgba(0, 210, 255, 0.25);
+  border-color: var(--neon-blue);
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-mobile:hover, .btn-mobile.active {
+  background: rgba(255, 0, 127, 0.25);
+  border-color: var(--super-magenta);
+  box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
+  transform: translateY(-2px);
+}
+
+/* CARD DE LEADERBOARD */
 .arcade-card {
   background: var(--panel-bg);
   border-radius: 16px;
-  padding: 20px 24px;
+  padding: 18px 22px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   margin-bottom: 20px;
   width: 100%;
@@ -279,22 +476,21 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
   color: var(--primary-color);
   font-weight: 800;
   letter-spacing: 1px;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
   padding-bottom: 8px;
 }
 
-/* Tabela de Leaderboard Arcade */
 .leaderboard-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 220px;
+  max-height: 200px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -306,7 +502,7 @@ html, body {
   padding: 8px 12px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
-  font-size: 14px;
+  font-size: 13px;
   border: 1px solid transparent;
 }
 
@@ -318,7 +514,7 @@ html, body {
 
 .rank-col {
   width: 35px;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .name-col {
@@ -335,7 +531,7 @@ html, body {
   font-weight: 800;
 }
 
-/* Form de Registro de Nome (Game Over) */
+/* INPUT DE INICIAIS DO JOGADOR */
 #name-input-group {
   display: none;
   flex-direction: column;
@@ -347,7 +543,7 @@ html, body {
 
 .name-input {
   width: 100%;
-  padding: 14px;
+  padding: 12px;
   border-radius: 12px;
   border: 2px solid var(--primary-color);
   background: rgba(0, 0, 0, 0.6);
@@ -364,8 +560,8 @@ html, body {
 }
 
 .btn-primary {
-  padding: 16px 42px;
-  font-size: 16px;
+  padding: 14px 38px;
+  font-size: 15px;
   font-weight: 900;
   font-family: var(--font-ui);
   background: linear-gradient(135deg, #27ae60, #2ecc71);
@@ -384,26 +580,60 @@ html, body {
   box-shadow: 0 8px 25px rgba(46, 204, 113, 0.6);
 }
 
-/* Responsividade Mobile */
-@media (max-width: 600px) {
+.btn-secondary {
+  padding: 12px 28px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: var(--font-ui);
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.03);
+}
+
+/* RESPONSIVIDADE MOBILE */
+@media (max-width: 650px) {
   .arcade-title {
-    font-size: 24px;
+    font-size: 22px;
   }
   .arcade-desc {
-    font-size: 12px;
+    font-size: 11px;
   }
   .stat-card {
-    padding: 8px 14px;
-    min-width: 90px;
+    padding: 6px 10px;
+    min-width: 80px;
   }
   .stat-value {
-    font-size: 20px;
+    font-size: 18px;
+  }
+  .dpad-wrapper {
+    width: 120px;
+    height: 120px;
   }
   .touch-btn {
-    width: 62px;
-    height: 62px;
+    width: 60px;
+    height: 60px;
+    font-size: 10px;
+  }
+  .touch-btn-fire {
+    width: 68px;
+    height: 68px;
   }
   #touch-controls {
-    display: flex;
+    bottom: 10px;
+    padding: 0 10px;
+  }
+  .platform-buttons-row {
+    flex-direction: column;
+  }
+  .btn-platform {
+    min-width: 100%;
   }
 }

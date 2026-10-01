@@ -1,8 +1,8 @@
 /**
  * game.js
- * Motor principal do jogo Duck Hunt 3D em Three.js
- * Gerencia o loop de animação, física, 3D Raycasting, Cão Bob, Munição, Sintetizador Web Audio
- * e integração com o Placar de Líderes do Firebase.
+ * Motor principal do jogo Duck Hunt Arcade 3D em Three.js
+ * Suporta Modo Computador (Teclado/Mouse) e Modo Celular (D-Pad Virtual Touch & Botões de Ação),
+ * Ondas de Inimigos (Wave System), Sistema de Pausa, Sintetizador Web Audio, Cão Bob e Firebase Leaderboard.
  */
 
 import * as THREE from 'three';
@@ -12,7 +12,10 @@ import {
   renderLeaderboardUI 
 } from './leaderboard.js';
 
-// Variáveis Principais da Cena 3D
+// ==========================================================================
+// ESTADO GLOBAL E VARIÁVEIS DE JOGO
+// ==========================================================================
+
 let scene, camera, renderer, clock;
 let shotgunGroup, muzzleFlash;
 let raycaster;
@@ -20,22 +23,43 @@ let raycaster;
 // Cão Bob (Dog State Machine & Animações)
 let dogGroup, dogState = 'IDLE', dogTargetPos = null, retrievedDuckData = null;
 let legFrontLeft, legFrontRight, legBackLeft, legBackRight, tailMesh, mouthJoint;
-let dogRunSpeed = 8; // Velocidades Padrão x Super Velocidade
+let dogRunSpeed = 8; // Velocidade do Bob
 
+// Posição da Mira (Crosshair) & Teclas/D-Pad
+const crosshairPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 const mousePos = new THREE.Vector2(0, 0);
 
-// Estado do Jogo
+// Estado de Controles e Teclado
+let controlMode = 'PC'; // 'PC' ou 'MOBILE'
+const keyState = {
+  up: false, down: false, left: false, right: false,
+  w: false, a: false, s: false, d: false
+};
+
+const dpadState = {
+  up: false, down: false, left: false, right: false
+};
+
+// Estado da Partida
 let score = 0;
 let ammo = 4;
 const maxAmmo = 4;
 let timeLeft = 60;
 let gameActive = false;
+let isPaused = false;
 let timerInterval = null;
+
+// Sistema de Ondas (Waves)
+let currentWave = 1;
+let ducksInWaveTotal = 5;
+let ducksSpawnedInWave = 0;
+let ducksKilledInWave = 0;
+let waveSpeedMultiplier = 1.0;
 
 const ducks = [];
 const particles = [];
 
-// Configuração dos Patos
+// Configuração dos Tipos de Patos
 const DUCK_TYPES = {
   COMMON: {
     id: 'COMMON', name: 'Comum', score: 10, speedMult: 1.0,
@@ -55,11 +79,14 @@ const DUCK_TYPES = {
   SUPER_GOLDEN: {
     id: 'SUPER_GOLDEN', name: 'Super Dourado', score: 100, speedMult: 2.8,
     bodyColor: 0xff007f, headColor: 0xffd700, beakColor: 0x00ffff,
-    scale: 0.8, metallic: true, chance: 0.25 // Habilitado com score >= 700
+    scale: 0.8, metallic: true, chance: 0.25 // Habilitado após 600 pts
   }
 };
 
-// Sintetizador Web Audio API Procedural
+// ==========================================================================
+// SINTETIZADOR WEB AUDIO API PROCEDURAL (EFEITOS SONOROS DE RETRÔ)
+// ==========================================================================
+
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playSound(type) {
@@ -141,6 +168,18 @@ function playSound(type) {
     gain.connect(audioCtx.destination);
     osc.start(now);
     osc.stop(now + 0.3);
+  } else if (type === 'wave') {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.exponentialRampToValueAtTime(800, now + 0.4);
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.4);
   } else if (type === 'speedup') {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -156,7 +195,10 @@ function playSound(type) {
   }
 }
 
-// Inicialização da Aplicação
+// ==========================================================================
+// INICIALIZAÇÃO DA CENA THREE.JS
+// ==========================================================================
+
 function init() {
   const container = document.getElementById('canvas-container');
 
@@ -183,6 +225,7 @@ function init() {
   createHuntingDog();
   setupLeaderboardSubscription();
   setupEventListeners();
+  setupPlatformSelectionUI();
 }
 
 function setupLights() {
@@ -335,12 +378,78 @@ function createHuntingDog() {
   scene.add(dogGroup);
 }
 
+// ==========================================================================
+// SELEÇÃO DE PLATAFORMA E GERENCIAMENTO DE MODO (PC vs MOBILE)
+// ==========================================================================
+
+function setupPlatformSelectionUI() {
+  const btnPC = document.getElementById('btn-mode-pc');
+  const btnMobile = document.getElementById('btn-mode-mobile');
+  const startBtn = document.getElementById('start-btn');
+  const touchControls = document.getElementById('touch-controls');
+
+  if (btnPC) {
+    btnPC.addEventListener('click', () => {
+      controlMode = 'PC';
+      btnPC.classList.add('active');
+      if (btnMobile) btnMobile.classList.remove('active');
+      if (touchControls) touchControls.style.display = 'none';
+      if (startBtn) {
+        startBtn.style.display = 'inline-block';
+        startBtn.innerText = '💻 INICIAR MODO COMPUTADOR';
+      }
+    });
+  }
+
+  if (btnMobile) {
+    btnMobile.addEventListener('click', () => {
+      controlMode = 'MOBILE';
+      btnMobile.classList.add('active');
+      if (btnPC) btnPC.classList.remove('active');
+      if (touchControls) touchControls.style.display = 'flex';
+      if (startBtn) {
+        startBtn.style.display = 'inline-block';
+        startBtn.innerText = '📱 INICIAR MODO CELULAR';
+      }
+    });
+  }
+
+  // Previne comportamentos padrões indesejados no mobile
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('dblclick', (e) => e.preventDefault());
+}
+
+// ==========================================================================
+// SISTEMA DE ONDAS (WAVES) E CRIAÇÃO DE PATOS
+// ==========================================================================
+
+function startWave(waveNum) {
+  currentWave = waveNum;
+  ducksInWaveTotal = 4 + waveNum * 2;
+  ducksSpawnedInWave = 0;
+  ducksKilledInWave = 0;
+  waveSpeedMultiplier = 1.0 + (waveNum - 1) * 0.2;
+
+  const waveVal = document.getElementById('wave-val');
+  if (waveVal) waveVal.innerText = currentWave;
+
+  playSound('wave');
+  triggerNotice(`🌊 ONDA ${currentWave} INICIADA!`, '#00d2ff');
+
+  // Spawna o primeiro pato da onda
+  setTimeout(() => {
+    if (gameActive && !isPaused) createDuck();
+  }, 1000);
+}
+
 function createDuck() {
+  if (!gameActive || isPaused || ducksSpawnedInWave >= ducksInWaveTotal) return;
+
   const rand = Math.random();
   let typeConfig = DUCK_TYPES.COMMON;
 
-  // SPAWN DO SUPER PATO DOURADO APÓS 700 PONTOS
-  if (score >= 700 && rand < DUCK_TYPES.SUPER_GOLDEN.chance) {
+  // SPAWN DO SUPER PATO DOURADO APÓS 600 PONTOS
+  if (score >= 600 && rand < DUCK_TYPES.SUPER_GOLDEN.chance) {
     typeConfig = DUCK_TYPES.SUPER_GOLDEN;
   } else if (rand > 1 - DUCK_TYPES.GOLDEN.chance) {
     typeConfig = DUCK_TYPES.GOLDEN;
@@ -391,7 +500,7 @@ function createDuck() {
   const startX = (Math.random() - 0.5) * 40;
   duck.position.set(startX, 1, -20 - Math.random() * 15);
 
-  const baseSpeed = typeConfig.speedMult;
+  const baseSpeed = typeConfig.speedMult * waveSpeedMultiplier;
   const duckData = {
     mesh: duck,
     config: typeConfig,
@@ -405,12 +514,17 @@ function createDuck() {
   };
 
   ducks.push(duckData);
+  ducksSpawnedInWave++;
   scene.add(duck);
   playSound('quack');
 }
 
-function shoot(clientX, clientY) {
-  if (!gameActive || ammo <= 0) return;
+// ==========================================================================
+// TIRO, RECARGA E COLISÃO (RAYCASTING)
+// ==========================================================================
+
+function shoot(targetX, targetY) {
+  if (!gameActive || isPaused || ammo <= 0) return;
 
   ammo--;
   updateAmmoUI();
@@ -422,10 +536,19 @@ function shoot(clientX, clientY) {
 
   setTimeout(() => { muzzleFlash.material.opacity = 0; }, 50);
 
-  if (typeof clientX === 'number' && typeof clientY === 'number') {
-    mousePos.x = (clientX / window.innerWidth) * 2 - 1;
-    mousePos.y = -(clientY / window.innerHeight) * 2 + 1;
+  let px = crosshairPos.x;
+  let py = crosshairPos.y;
+
+  if (typeof targetX === 'number' && typeof targetY === 'number') {
+    px = targetX;
+    py = targetY;
+    crosshairPos.x = px;
+    crosshairPos.y = py;
+    updateCrosshairDOM();
   }
+
+  mousePos.x = (px / window.innerWidth) * 2 - 1;
+  mousePos.y = -(py / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(mousePos, camera);
   const duckMeshes = ducks.map(d => d.mesh);
@@ -442,7 +565,8 @@ function shoot(clientX, clientY) {
       duckData.isHit = true;
       duckData.velocity.set(0, -12, 0);
       
-      score += duckData.config.score;
+      score += duckData.config.score * currentWave;
+      ducksKilledInWave++;
       document.getElementById('score-val').innerText = score;
       
       createFeatherExplosion(intersects[0].point, duckData.config.bodyColor);
@@ -451,7 +575,7 @@ function shoot(clientX, clientY) {
 }
 
 function reload() {
-  if (ammo === maxAmmo || !gameActive) return;
+  if (ammo === maxAmmo || !gameActive || isPaused) return;
   ammo = maxAmmo;
   updateAmmoUI();
   playSound('reload');
@@ -489,7 +613,7 @@ function triggerNotice(text, color = '#ffd700') {
     setTimeout(() => {
       notice.style.opacity = '0';
       notice.style.transform = 'translate(-50%, -50%)';
-    }, 1400);
+    }, 1500);
   }
 }
 
@@ -501,7 +625,7 @@ function triggerTimeBonus(seconds) {
 }
 
 function triggerBobSpeedBoost() {
-  dogRunSpeed = 16; // Super velocidade do Bob
+  dogRunSpeed = 16;
   playSound('speedup');
   triggerNotice(`⚡ SUPER VELOCIDADE DO BOB AUMENTADA! 🐕💨`, '#ff007f');
 }
@@ -566,7 +690,7 @@ function updateDogBehavior(delta, time) {
 
       setTimeout(() => {
         dogState = 'RETURNING';
-      }, 1500);
+      }, 1400);
     }
   } else if (dogState === 'CELEBRATING') {
     dogGroup.position.y = Math.abs(Math.sin(time * 10)) * 0.3;
@@ -604,81 +728,199 @@ function updateDogBehavior(delta, time) {
   }
 }
 
-// Configuração dos Event Listeners (Teclado, Mouse & Touch)
+// ==========================================================================
+// CONTROLES TECLADO / MOUSE / TOUCH D-PAD
+// ==========================================================================
+
+function updateCrosshairDOM() {
+  const crosshair = document.getElementById('crosshair');
+  if (crosshair) {
+    crosshair.style.left = crosshairPos.x + 'px';
+    crosshair.style.top = crosshairPos.y + 'px';
+  }
+
+  mousePos.x = (crosshairPos.x / window.innerWidth) * 2 - 1;
+  mousePos.y = -(crosshairPos.y / window.innerHeight) * 2 + 1;
+
+  camera.rotation.y = -mousePos.x * 1.3;
+  camera.rotation.x = mousePos.y * 1.3;
+}
+
+function processInputMovement(delta) {
+  if (!gameActive || isPaused) return;
+
+  const moveSpeed = 650 * delta; // Velocidade de movimentação da mira
+
+  let moveX = 0;
+  let moveY = 0;
+
+  // D-Pad Touch State
+  if (dpadState.up) moveY -= moveSpeed;
+  if (dpadState.down) moveY += moveSpeed;
+  if (dpadState.left) moveX -= moveSpeed;
+  if (dpadState.right) moveX += moveSpeed;
+
+  // Keyboard WASD / Arrow State
+  if (keyState.w || keyState.up) moveY -= moveSpeed;
+  if (keyState.s || keyState.down) moveY += moveSpeed;
+  if (keyState.a || keyState.left) moveX -= moveSpeed;
+  if (keyState.d || keyState.right) moveX += moveSpeed;
+
+  if (moveX !== 0 || moveY !== 0) {
+    crosshairPos.x = Math.max(20, Math.min(window.innerWidth - 20, crosshairPos.x + moveX));
+    crosshairPos.y = Math.max(20, Math.min(window.innerHeight - 20, crosshairPos.y + moveY));
+    updateCrosshairDOM();
+  }
+}
+
 function setupEventListeners() {
   window.addEventListener('resize', onWindowResize);
 
-  // Controles de Mira (Mouse / Touch)
+  // Mouse Movement
   document.addEventListener('mousemove', (e) => {
-    if (!gameActive) return;
-    updatePointerPosition(e.clientX, e.clientY);
+    if (!gameActive || isPaused) return;
+    crosshairPos.x = e.clientX;
+    crosshairPos.y = e.clientY;
+    updateCrosshairDOM();
   });
 
   document.addEventListener('mousedown', (e) => {
-    if (!gameActive) return;
-    // Evita disparar se clicar nos botões do modal ou HUD
-    if (e.target.closest('#screen-overlay') || e.target.closest('#touch-controls')) return;
+    if (!gameActive || isPaused) return;
+    if (e.target.closest('#screen-overlay') || e.target.closest('#pause-overlay') || e.target.closest('#touch-controls') || e.target.closest('#pause-btn')) return;
     shoot(e.clientX, e.clientY);
   });
 
-  // Suporte a Telas Sensíveis ao Toque (Mobile)
+  // Touch Events na Tela (Mobile Direct Tap / Drag)
   document.addEventListener('touchstart', (e) => {
-    if (!gameActive) return;
-    if (e.target.closest('#screen-overlay') || e.target.closest('#touch-controls')) return;
+    if (!gameActive || isPaused) return;
+    if (e.target.closest('#screen-overlay') || e.target.closest('#pause-overlay') || e.target.closest('#touch-controls') || e.target.closest('#pause-btn')) return;
     if (e.touches.length > 0) {
       const touch = e.touches[0];
-      updatePointerPosition(touch.clientX, touch.clientY);
       shoot(touch.clientX, touch.clientY);
     }
   }, { passive: false });
 
-  document.addEventListener('touchmove', (e) => {
-    if (!gameActive || e.touches.length === 0) return;
-    const touch = e.touches[0];
-    updatePointerPosition(touch.clientX, touch.clientY);
-  }, { passive: true });
+  // Configuração do D-Pad Virtual (Touch / Mouse)
+  const bindDpadButton = (id, directionKey) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
 
-  // Botões Virtuais Touch
+    const startAction = (e) => {
+      e.preventDefault();
+      dpadState[directionKey] = true;
+      btn.classList.add('active');
+    };
+
+    const stopAction = (e) => {
+      e.preventDefault();
+      dpadState[directionKey] = false;
+      btn.classList.remove('active');
+    };
+
+    btn.addEventListener('touchstart', startAction, { passive: false });
+    btn.addEventListener('touchend', stopAction);
+    btn.addEventListener('mousedown', startAction);
+    btn.addEventListener('mouseup', stopAction);
+    btn.addEventListener('mouseleave', stopAction);
+  };
+
+  bindDpadButton('dpad-up', 'up');
+  bindDpadButton('dpad-down', 'down');
+  bindDpadButton('dpad-left', 'left');
+  bindDpadButton('dpad-right', 'right');
+
+  // Botões Virtuais de Ação (Tiro & Recarga)
   const fireBtn = document.getElementById('touch-fire-btn');
   if (fireBtn) {
-    fireBtn.addEventListener('touchstart', (e) => {
+    const handleFire = (e) => {
       e.preventDefault();
-      if (gameActive) shoot();
-    });
+      if (gameActive && !isPaused) shoot();
+    };
+    fireBtn.addEventListener('touchstart', handleFire, { passive: false });
+    fireBtn.addEventListener('click', handleFire);
   }
 
   const reloadBtn = document.getElementById('touch-reload-btn');
   if (reloadBtn) {
-    reloadBtn.addEventListener('touchstart', (e) => {
+    const handleReload = (e) => {
       e.preventDefault();
-      if (gameActive) reload();
-    });
+      if (gameActive && !isPaused) reload();
+    };
+    reloadBtn.addEventListener('touchstart', handleReload, { passive: false });
+    reloadBtn.addEventListener('click', handleReload);
   }
 
   // Teclado
   document.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') keyState.up = true;
+    if (e.code === 'KeyS' || e.code === 'ArrowDown') keyState.down = true;
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') keyState.left = true;
+    if (e.code === 'KeyD' || e.code === 'ArrowRight') keyState.right = true;
+
     if (e.code === 'KeyR') reload();
+    if (e.code === 'Space') {
+      e.preventDefault();
+      shoot();
+    }
+    if (e.code === 'KeyP' || e.code === 'Escape') {
+      togglePause();
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (e.code === 'KeyW' || e.code === 'ArrowUp') keyState.up = false;
+    if (e.code === 'KeyS' || e.code === 'ArrowDown') keyState.down = false;
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') keyState.left = false;
+    if (e.code === 'KeyD' || e.code === 'ArrowRight') keyState.right = false;
+  });
+
+  // Botão de Pausa e Modal
+  const pauseBtn = document.getElementById('pause-btn');
+  if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
+
+  const resumeBtn = document.getElementById('resume-btn');
+  if (resumeBtn) resumeBtn.addEventListener('click', togglePause);
+
+  const restartBtn = document.getElementById('restart-btn');
+  if (restartBtn) restartBtn.addEventListener('click', () => {
+    hidePauseModal();
+    startGame();
+  });
+
+  const changeModeBtn = document.getElementById('change-mode-btn');
+  if (changeModeBtn) changeModeBtn.addEventListener('click', () => {
+    hidePauseModal();
+    endGame(true); // Exibe menu inicial
   });
 
   // Botão Inicial
   document.getElementById('start-btn').addEventListener('click', onStartButtonClick);
 }
 
-function updatePointerPosition(clientX, clientY) {
-  mousePos.x = (clientX / window.innerWidth) * 2 - 1;
-  mousePos.y = -(clientY / window.innerHeight) * 2 + 1;
+// ==========================================================================
+// PAUSA E MENU
+// ==========================================================================
 
-  const crosshair = document.getElementById('crosshair');
-  if (crosshair) {
-    crosshair.style.left = clientX + 'px';
-    crosshair.style.top = clientY + 'px';
+function togglePause() {
+  if (!gameActive) return;
+  isPaused = !isPaused;
+
+  const pauseModal = document.getElementById('pause-overlay');
+  if (pauseModal) {
+    pauseModal.style.display = isPaused ? 'flex' : 'none';
   }
-
-  camera.rotation.y = -mousePos.x * 1.3;
-  camera.rotation.x = mousePos.y * 1.3;
 }
 
-// Configura o Placar em Tempo Real via Firebase (Top 10)
+function hidePauseModal() {
+  isPaused = false;
+  const pauseModal = document.getElementById('pause-overlay');
+  if (pauseModal) pauseModal.style.display = 'none';
+}
+
+// ==========================================================================
+// LÓGICA DE JOGO, INÍCIO E FIM DE PARTIDA
+// ==========================================================================
+
 function setupLeaderboardSubscription() {
   const container = document.getElementById('leaderboard-container');
   subscribeTop10Scores((scores) => {
@@ -692,8 +934,9 @@ function startGame() {
   timeLeft = 60;
   dogRunSpeed = 8;
   gameActive = true;
+  isPaused = false;
 
-  // Limpa patos e partículas residuais da partida anterior
+  // Limpa patos e partículas residuais
   for (const d of ducks) {
     if (d.mesh) scene.remove(d.mesh);
   }
@@ -712,27 +955,35 @@ function startGame() {
   document.getElementById('timer-val').innerText = '60s';
   document.getElementById('screen-overlay').style.display = 'none';
   document.getElementById('name-input-group').style.display = 'none';
+  hidePauseModal();
   updateAmmoUI();
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
+    if (!gameActive || isPaused) return;
+
     timeLeft--;
     document.getElementById('timer-val').innerText = timeLeft + 's';
 
-    if (timeLeft % 2 === 0 && ducks.length < 5) {
+    // Gerenciador de Onda: Spawna patos periódicos se necessário
+    if (ducksSpawnedInWave < ducksInWaveTotal && ducks.length < 4) {
       createDuck();
+    }
+
+    // Avança de Onda se a onda atual terminou
+    if (ducksSpawnedInWave >= ducksInWaveTotal && ducks.length === 0) {
+      startWave(currentWave + 1);
     }
 
     if (timeLeft <= 0) endGame();
   }, 1000);
 
-  createDuck();
+  startWave(1);
 }
 
 async function onStartButtonClick() {
   const nameGroup = document.getElementById('name-input-group');
   if (nameGroup && nameGroup.style.display === 'flex') {
-    // Se o formulário de nome estava visível (Game Over), salva o recorde primeiro
     const input = document.getElementById('player-name-input');
     const name = input ? input.value : 'PATO';
     await saveHighScore(name, score);
@@ -741,19 +992,33 @@ async function onStartButtonClick() {
   startGame();
 }
 
-function endGame() {
+function endGame(returnToMenu = false) {
   gameActive = false;
+  isPaused = false;
   clearInterval(timerInterval);
 
-  document.getElementById('title-text').innerText = 'FIM DA CAÇADA!';
-  document.getElementById('desc-text').innerHTML = `Sua Pontuação Total: <b style="color: #ffeb3b; font-size: 20px;">${score} PONTOS</b>`;
-  
-  // Exibe o input para registrar iniciais
+  const titleEl = document.getElementById('title-text');
+  const descEl = document.getElementById('desc-text');
   const nameGroup = document.getElementById('name-input-group');
-  if (nameGroup) nameGroup.style.display = 'flex';
+  const startBtn = document.getElementById('start-btn');
+  const overlay = document.getElementById('screen-overlay');
 
-  document.getElementById('start-btn').innerText = 'SALVAR RECORDES & JOGAR NOVAMENTE';
-  document.getElementById('screen-overlay').style.display = 'flex';
+  if (returnToMenu) {
+    if (titleEl) titleEl.innerText = 'DUCK HUNT ARCADE 3D';
+    if (descEl) descEl.innerHTML = 'Escolha a plataforma para continuar jogando!';
+    if (nameGroup) nameGroup.style.display = 'none';
+    if (startBtn) startBtn.style.display = 'none';
+  } else {
+    if (titleEl) titleEl.innerText = 'FIM DA CAÇADA!';
+    if (descEl) descEl.innerHTML = `Pontuação Final: <b style="color: #ffeb3b; font-size: 20px;">${score} PONTOS</b> | Onda Alcançada: <b style="color: #00d2ff; font-size: 20px;">${currentWave}</b>`;
+    if (nameGroup) nameGroup.style.display = 'flex';
+    if (startBtn) {
+      startBtn.style.display = 'inline-block';
+      startBtn.innerText = 'SALVAR RECORDES & JOGAR NOVAMENTE';
+    }
+  }
+
+  if (overlay) overlay.style.display = 'flex';
 }
 
 function onWindowResize() {
@@ -762,61 +1027,69 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// Loop Principal do Jogo 3D
+// ==========================================================================
+// LOOP DE ANIMAÇÃO PRINCIPAL (60 FPS)
+// ==========================================================================
+
 function animate() {
   requestAnimationFrame(animate);
+
   const delta = clock.getDelta();
   const time = clock.getElapsedTime();
 
-  shotgunGroup.position.z = THREE.MathUtils.lerp(shotgunGroup.position.z, -0.6, 0.1);
-  shotgunGroup.rotation.x = THREE.MathUtils.lerp(shotgunGroup.rotation.x, 0, 0.1);
+  if (gameActive && !isPaused) {
+    processInputMovement(delta);
 
-  updateDogBehavior(delta, time);
+    shotgunGroup.position.z = THREE.MathUtils.lerp(shotgunGroup.position.z, -0.6, 0.1);
+    shotgunGroup.rotation.x = THREE.MathUtils.lerp(shotgunGroup.rotation.x, 0, 0.1);
 
-  // Atualização dos Patos
-  for (let i = ducks.length - 1; i >= 0; i--) {
-    const d = ducks[i];
-    d.mesh.position.addScaledVector(d.velocity, delta);
-    d.timeAlive += delta;
+    updateDogBehavior(delta, time);
 
-    if (!d.isHit) {
-      const wingL = d.mesh.getObjectByName('wingLeft');
-      const wingR = d.mesh.getObjectByName('wingRight');
-      const flapSpeed = 15 * d.config.speedMult;
-      if (wingL && wingR) {
-        wingL.rotation.z = Math.sin(d.timeAlive * flapSpeed) * 0.5;
-        wingR.rotation.z = -Math.sin(d.timeAlive * flapSpeed) * 0.5;
+    // Atualização dos Patos
+    for (let i = ducks.length - 1; i >= 0; i--) {
+      const d = ducks[i];
+      d.mesh.position.addScaledVector(d.velocity, delta);
+      d.timeAlive += delta;
+
+      if (!d.isHit) {
+        const wingL = d.mesh.getObjectByName('wingLeft');
+        const wingR = d.mesh.getObjectByName('wingRight');
+        const flapSpeed = 15 * d.config.speedMult;
+        if (wingL && wingR) {
+          wingL.rotation.z = Math.sin(d.timeAlive * flapSpeed) * 0.5;
+          wingR.rotation.z = -Math.sin(d.timeAlive * flapSpeed) * 0.5;
+        }
+      } else if (d.mesh.position.y <= 0.2 && d.mesh.position.y > -2) {
+        d.mesh.position.y = 0;
+        d.velocity.set(0, 0, 0);
+        triggerDogFetch(d);
+        ducks.splice(i, 1);
       }
-    } else if (d.mesh.position.y <= 0.2 && d.mesh.position.y > -2) {
-      d.mesh.position.y = 0;
-      d.velocity.set(0, 0, 0);
-      triggerDogFetch(d);
-      ducks.splice(i, 1);
+
+      if (d.mesh.position.y > 45 || Math.abs(d.mesh.position.x) > 55) {
+        scene.remove(d.mesh);
+        ducks.splice(i, 1);
+      }
     }
 
-    if (d.mesh.position.y > 45 || Math.abs(d.mesh.position.x) > 55) {
-      scene.remove(d.mesh);
-      ducks.splice(i, 1);
-    }
-  }
+    // Partículas
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.mesh.position.addScaledVector(p.vel, delta);
+      p.life -= delta * 1.5;
+      p.mesh.scale.setScalar(p.life);
 
-  // Partículas
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.mesh.position.addScaledVector(p.vel, delta);
-    p.life -= delta * 1.5;
-    p.mesh.scale.setScalar(p.life);
-
-    if (p.life <= 0) {
-      scene.remove(p.mesh);
-      particles.splice(i, 1);
+      if (p.life <= 0) {
+        scene.remove(p.mesh);
+        particles.splice(i, 1);
+      }
     }
   }
 
   renderer.render(scene, camera);
 }
 
-// Inicializa a cena quando a página carrega
+// Inicializa o jogo quando o DOM estiver totalmente carregado
 window.addEventListener('DOMContentLoaded', () => {
   init();
   animate();
