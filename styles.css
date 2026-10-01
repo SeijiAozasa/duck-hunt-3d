@@ -1,0 +1,409 @@
+/* ==========================================================================
+   DUCK HUNT 3D - STYLESHEET (CSS3 RESPONSIVO E TEMÁTICA ARCADE NEON)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Press+Start+2P&display=swap');
+
+:root {
+  --primary-color: #ffeb3b;
+  --secondary-color: #e74c3c;
+  --accent-gold: #ffd700;
+  --super-magenta: #ff007f;
+  --bg-overlay: rgba(10, 15, 30, 0.85);
+  --panel-bg: rgba(20, 25, 45, 0.75);
+  --neon-glow: 0 0 12px rgba(255, 235, 59, 0.6);
+  --font-arcade: 'Press Start 2P', monospace;
+  --font-ui: 'Orbitron', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #78c7f7;
+  font-family: var(--font-ui);
+  touch-action: none;
+}
+
+/* Container Canvas 3D */
+#canvas-container {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+/* Mira Crosshair para Desktop */
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+}
+#crosshair::before, #crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.8), 0 0 10px var(--primary-color);
+}
+#crosshair::before {
+  top: 11px;
+  left: 0;
+  width: 24px;
+  height: 2px;
+}
+#crosshair::after {
+  top: 0;
+  left: 11px;
+  width: 2px;
+  height: 24px;
+}
+
+/* HUD Superior e Inferior */
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 20px;
+  z-index: 5;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.stat-card {
+  background: var(--panel-bg);
+  backdrop-filter: blur(10px);
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  min-width: 120px;
+}
+
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #aaa;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--primary-color);
+  text-shadow: 0 0 8px rgba(255, 235, 59, 0.5);
+}
+
+.bottom-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+/* Cartuchos de Espingarda */
+.ammo-container {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.shell {
+  width: 18px;
+  height: 44px;
+  background: linear-gradient(to right, #e74c3c, #c0392b);
+  border: 2px solid #900c3f;
+  border-radius: 3px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  position: relative;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.shell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 9px;
+  background: linear-gradient(to right, #f1c40f, #d4ac0d);
+  border-bottom: 1px solid #b7950b;
+}
+
+.shell.spent {
+  opacity: 0.25;
+  transform: scale(0.85) translateY(4px);
+}
+
+/* Notificação de Power-up Central */
+#powerup-notice {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--accent-gold);
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.9), 0 4px 10px rgba(0,0,0,0.9);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.5s ease;
+  pointer-events: none;
+  z-index: 20;
+  text-align: center;
+  width: 90%;
+  max-width: 600px;
+}
+
+/* Controles Virtuais Touch para Mobile */
+#touch-controls {
+  position: absolute;
+  bottom: 25px;
+  right: 20px;
+  display: none; /* Ativado via JS em dispositivos touch */
+  gap: 15px;
+  pointer-events: auto;
+  z-index: 15;
+}
+
+.touch-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.touch-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 235, 59, 0.5);
+  color: #000;
+}
+
+.touch-btn-reload {
+  background: rgba(231, 76, 60, 0.4);
+  border-color: rgba(231, 76, 60, 0.8);
+}
+
+/* Modal Overlay (Start / Game Over / Leaderboard) */
+#screen-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  z-index: 100;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.arcade-title {
+  font-family: var(--font-arcade);
+  font-size: 32px;
+  color: var(--primary-color);
+  text-shadow: 0 0 15px rgba(255, 235, 59, 0.8), 4px 4px 0px #d35400;
+  margin-bottom: 12px;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.arcade-desc {
+  font-size: 14px;
+  color: #ddd;
+  margin-bottom: 20px;
+  text-align: center;
+  max-width: 580px;
+  line-height: 1.6;
+}
+
+.arcade-card {
+  background: var(--panel-bg);
+  border-radius: 16px;
+  padding: 20px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  text-transform: uppercase;
+  color: var(--primary-color);
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 8px;
+}
+
+/* Tabela de Leaderboard Arcade */
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 14px;
+  border: 1px solid transparent;
+}
+
+.leaderboard-row.top-rank {
+  background: rgba(255, 215, 0, 0.12);
+  border-color: rgba(255, 215, 0, 0.4);
+  font-weight: bold;
+}
+
+.rank-col {
+  width: 35px;
+  font-size: 16px;
+}
+
+.name-col {
+  flex: 1;
+  text-align: left;
+  font-family: var(--font-arcade);
+  font-size: 11px;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+.score-col {
+  color: var(--primary-color);
+  font-weight: 800;
+}
+
+/* Form de Registro de Nome (Game Over) */
+#name-input-group {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.name-input {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: 2px solid var(--primary-color);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-family: var(--font-arcade);
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  outline: none;
+}
+.name-input:focus {
+  box-shadow: 0 0 15px rgba(255, 235, 59, 0.6);
+}
+
+.btn-primary {
+  padding: 16px 42px;
+  font-size: 16px;
+  font-weight: 900;
+  font-family: var(--font-ui);
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-primary:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(46, 204, 113, 0.6);
+}
+
+/* Responsividade Mobile */
+@media (max-width: 600px) {
+  .arcade-title {
+    font-size: 24px;
+  }
+  .arcade-desc {
+    font-size: 12px;
+  }
+  .stat-card {
+    padding: 8px 14px;
+    min-width: 90px;
+  }
+  .stat-value {
+    font-size: 20px;
+  }
+  .touch-btn {
+    width: 62px;
+    height: 62px;
+  }
+  #touch-controls {
+    display: flex;
+  }
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Duck Hunt 3D - Super Pato Dourado & Leaderboard Firebase</title>
+  
+  <!-- SEO & Meta Tags -->
+  <meta name="description" content="Jogo Arcade 3D Duck Hunt com suporte a Mobile Touch, Super Pato Dourado, Cão Bob e Ranking Online via Firebase.">
+  <meta name="theme-color" content="#78c7f7">
+
+  <!-- Estilos e Fontes -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Import Map para Three.js v0.160.0 -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Canvas Container 3D -->
+  <div id="canvas-container"></div>
+
+  <!-- Crosshair (Mira) -->
+  <div id="crosshair"></div>
+
+  <!-- Notificação Central de Power-up -->
+  <div id="powerup-notice">POWER UP!</div>
+
+  <!-- HUD Interface -->
+  <div id="hud">
+    <div class="top-bar">
+      <div class="stat-card">
+        <div class="stat-label">Pontuação</div>
+        <div class="stat-value" id="score-val">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tempo Restante</div>
+        <div class="stat-value" id="timer-val">60s</div>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="stat-card">
+        <div class="stat-label" style="margin-bottom: 6px;">Cartuchos (R)</div>
+        <div class="ammo-container" id="ammo-box">
+          <div class="shell"></div>
+          <div class="shell"></div>
+          <div class="shell"></div>
+          <div class="shell"></div>
+        </div>
+      </div>
+
+      <!-- Controles Virtuais para Mobile/Touch -->
+      <div id="touch-controls">
+        <button id="touch-reload-btn" class="touch-btn touch-btn-reload" title="Recarregar Espingarda">
+          🔄
+          <span>RECARGAR</span>
+        </button>
+        <button id="touch-fire-btn" class="touch-btn" title="Atirar">
+          🎯
+          <span>ATIRAR</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen Overlay (Start / Game Over / Leaderboard) -->
+  <div id="screen-overlay">
+    <h1 class="arcade-title" id="title-text">DUCK HUNT 3D</h1>
+    
+    <p class="arcade-desc" id="desc-text">
+      Mire e atire nos patos! Sua espingarda possui <b>4 Cartuchos</b>.<br>
+      🟢 <b>Comum</b> (+10 pts) | 🔵 <b>Veloz</b> (+25 pts) | 🟡 <b>Dourado</b> (+50 pts | +5s)<br>
+      👑 <b>Super Pato Dourado</b> (+100 pts | Respawn após 700 pts): Ativa a <b>Super Velocidade do Cão Bob</b>!<br>
+      <i>Pressione <b>'R'</b> no teclado ou o botão <b>RECARGAR</b> para abastecer.</i>
+    </p>
+
+    <!-- Formulário de Registro no Game Over (Iniciais / Nome) -->
+    <div id="name-input-group">
+      <label for="player-name-input" style="font-size: 12px; color: #ffeb3b; text-transform: uppercase; font-weight: bold; text-align: center;">
+        DIGITE SUAS 3 INICIAIS PARA O RECORDES ARCADE:
+      </label>
+      <input type="text" id="player-name-input" class="name-input" maxlength="3" placeholder="PATO" value="BOB" autocomplete="off">
+    </div>
+
+    <!-- Card de Leaderboard (Top 10 Online Firebase) -->
+    <div class="arcade-card">
+      <div class="card-header">
+        <span>🏆 HIGH SCORES (TOP 10 ONLINE)</span>
+        <span style="font-size: 10px; color: #2ecc71;" id="status-indicator">● ONLINE</span>
+      </div>
+      <div class="leaderboard-list" id="leaderboard-container">
+        <!-- Preenchido via leaderboard.js -->
+        <div style="text-align: center; color: #aaa; padding: 15px;">Carregando recordes do Firebase...</div>
+      </div>
+    </div>
+
+    <button id="start-btn" class="btn-primary">INICIAR CAÇADA</button>
+  </div>
+
+  <!-- Game Engine (Module) -->
+  <script type="module" src="game.js"></script>
+</body>
+</html>
