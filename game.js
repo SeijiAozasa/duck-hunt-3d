@@ -1,10 +1,7 @@
 /**
  * game.js
  * Engine principal do Arcade Shooter 3D em Three.js
- * Sistema de Ciclo Dia & Noite (Inicia no Modo Diurno; Alterna para Noturno com Lanterna a cada 10 Ondas: Onda 10, 20, 30...),
- * HUD Customizada (Botões da direita deslocados 100px para cima/esquerda, Reload -50px mais para baixo),
- * Radar Mini-mapa 2D, Contador FPS, Gatilho Secundário, Joystick Analógico Virtual 360°,
- * Barra de Vida, Waves, Web Audio API e Firebase Leaderboard.
+ * Suporte para Auto-Ajuste de Tela (Mobile & Desktop Responsivo) e Sensibilidade Suave para Touch.
  */
 
 import * as THREE from 'three';
@@ -31,7 +28,7 @@ let targetAmbientIntensity = 0.75;
 let targetDirIntensity = 1.4;
 let targetSpotlightIntensity = 0.0;
 
-// Cão Bob (Dog State Machine & Animações)
+// Cão Bob
 let dogGroup, dogState = 'IDLE', dogTargetPos = null, retrievedDuckData = null;
 let legFrontLeft, legFrontRight, legBackLeft, legBackRight, tailMesh, mouthJoint;
 let dogRunSpeed = 8;
@@ -39,6 +36,9 @@ let dogRunSpeed = 8;
 // Posição da Mira e Vetor de Movimento Analógico 360°
 const crosshairPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 const mousePos = new THREE.Vector2(0, 0);
+
+// Fator de Sensibilidade Ajustado (Suaviza rotações e mira no ecrã do telemóvel)
+const LOOK_SENSITIVITY = 0.55;
 
 // Vetor do Joystick Analógico Virtual 360° [-1.0, 1.0]
 const joystickVector = { x: 0, y: 0 };
@@ -48,8 +48,8 @@ let joystickTouchId = null;
 let frameCount = 0;
 let lastFpsTime = performance.now();
 
-// Estado de Controles PC
-let controlMode = 'PC'; // 'PC' ou 'MOBILE'
+// Estado de Controles
+let controlMode = 'PC';
 const keyState = {
   up: false, down: false, left: false, right: false,
   w: false, a: false, s: false, d: false
@@ -101,7 +101,7 @@ const DUCK_TYPES = {
 };
 
 // ==========================================================================
-// SINTETIZADOR WEB AUDIO API PROCEDURAL (RETRO SOUND FX)
+// SINTETIZADOR WEB AUDIO API PROCEDURAL
 // ==========================================================================
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -201,7 +201,7 @@ function playSound(type) {
 }
 
 // ==========================================================================
-// INICIALIZAÇÃO DA CENA THREE.JS
+// INICIALIZAÇÃO DA CENA THREE.JS E REDIMENSIONAMENTO AUTO-AJUSTÁVEL
 // ==========================================================================
 
 function init() {
@@ -234,6 +234,20 @@ function init() {
   setupVirtualAnalogJoystick();
 }
 
+/**
+ * Função de Auto-Ajuste Responsivo da Tela
+ */
+function onWindowResize() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+}
+
 function setupLights() {
   ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
   scene.add(ambientLight);
@@ -241,11 +255,10 @@ function setupLights() {
   dirLight = new THREE.DirectionalLight(0xfffaed, 1.4);
   dirLight.position.set(20, 40, 20);
   dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 2048;
-  dirLight.shadow.mapSize.height = 2048;
+  dirLight.shadow.mapSize.width = 1024;
+  dirLight.shadow.mapSize.height = 1024;
   scene.add(dirLight);
 
-  // Lanterna Noturna (Spotlight acoplado à câmera para o Modo Noturno)
   flashlightSpotlight = new THREE.SpotLight(0xffffff, 0);
   flashlightSpotlight.angle = Math.PI / 6;
   flashlightSpotlight.penumbra = 0.4;
@@ -393,11 +406,10 @@ function createHuntingDog() {
 }
 
 // ==========================================================================
-// CICLO DIA E NOITE (TRANSITION ENGINE A CADA 10 ONDAS)
+// CICLO DIA E NOITE
 // ==========================================================================
 
 function updateEnvironmentCycle(waveNum) {
-  // A cada 10 ondas (Onda 10, Onda 20, Onda 30...) ativa o Modo Noturno
   isNightMode = (waveNum % 10 === 0);
 
   const cyclePill = document.getElementById('cycle-pill');
@@ -471,7 +483,6 @@ function renderMinimap() {
   ctx.moveTo(0, center); ctx.lineTo(w, center);
   ctx.stroke();
 
-  // Caçador
   ctx.fillStyle = '#2ecc71';
   ctx.shadowColor = '#2ecc71';
   ctx.shadowBlur = 8;
@@ -479,7 +490,6 @@ function renderMinimap() {
   ctx.arc(center, center, 4, 0, Math.PI * 2);
   ctx.fill();
 
-  // Cão Bob
   if (dogGroup) {
     const mapScale = 1.8;
     const dx = center + (dogGroup.position.x * mapScale);
@@ -494,7 +504,6 @@ function renderMinimap() {
     }
   }
 
-  // Inimigos / Patos Flying
   ctx.fillStyle = '#e74c3c';
   ctx.shadowColor = '#e74c3c';
   const mapScale = 1.8;
@@ -526,7 +535,7 @@ function updateFpsCounter() {
 }
 
 // ==========================================================================
-// MATEMÁTICA DO JOYSTICK ANALÓGICO VIRTUAL 360° (TOUCH ANALOG ENGINE)
+// MATEMÁTICA DO JOYSTICK ANALÓGICO VIRTUAL 360°
 // ==========================================================================
 
 function setupVirtualAnalogJoystick() {
@@ -629,7 +638,7 @@ function setupPlatformSelectionUI() {
       if (touchControls) touchControls.style.display = 'flex';
       if (startBtn) {
         startBtn.style.display = 'inline-block';
-        startBtn.innerText = '📱 INICIAR MODO CELULAR (LANDSCAPE)';
+        startBtn.innerText = '📱 INICIAR MODO TELEMÓVEL (LANDSCAPE)';
       }
     });
   }
@@ -652,7 +661,6 @@ function startWave(waveNum) {
   const waveVal = document.getElementById('wave-val');
   if (waveVal) waveVal.innerText = currentWave;
 
-  // Atualiza Ciclo Dia / Noite para a nova onda
   updateEnvironmentCycle(currentWave);
 
   playSound('wave');
@@ -981,7 +989,7 @@ function updateDogBehavior(delta, time) {
 }
 
 // ==========================================================================
-// PROCESSAMENTO DE MOVIMENTO ANALÓGICO 360°
+// PROCESSAMENTO DE MIRA E MOVIMENTO COM FATOR DE SENSIBILIDADE (LOOK_SENSITIVITY)
 // ==========================================================================
 
 function updateCrosshairDOM() {
@@ -994,8 +1002,9 @@ function updateCrosshairDOM() {
   mousePos.x = (crosshairPos.x / window.innerWidth) * 2 - 1;
   mousePos.y = -(crosshairPos.y / window.innerHeight) * 2 + 1;
 
-  camera.rotation.y = -mousePos.x * 1.3;
-  camera.rotation.x = mousePos.y * 1.3;
+  // Aplicação da rotação suavizada com o LOOK_SENSITIVITY
+  camera.rotation.y = -mousePos.x * 1.3 * LOOK_SENSITIVITY;
+  camera.rotation.x = mousePos.y * 1.3 * LOOK_SENSITIVITY;
 }
 
 function processInputMovement(delta) {
@@ -1023,6 +1032,7 @@ function processInputMovement(delta) {
 }
 
 function setupEventListeners() {
+  // Evento de auto-ajuste de ecrã ao redimensionar ou rodar o telemóvel
   window.addEventListener('resize', onWindowResize);
 
   document.addEventListener('mousemove', (e) => {
@@ -1047,7 +1057,6 @@ function setupEventListeners() {
     }
   }, { passive: false });
 
-  // Botões de Tiro Touch (Principal & Secundário Top-Left)
   const bindFireButton = (btnId) => {
     const btn = document.getElementById(btnId);
     if (!btn) return;
@@ -1062,7 +1071,6 @@ function setupEventListeners() {
   bindFireButton('touch-fire-btn');
   bindFireButton('top-left-fire-btn');
 
-  // Botão de Recarga Touch
   const reloadBtn = document.getElementById('touch-reload-btn');
   if (reloadBtn) {
     const handleReload = (e) => {
@@ -1073,7 +1081,6 @@ function setupEventListeners() {
     reloadBtn.addEventListener('click', handleReload);
   }
 
-  // Teclado PC
   document.addEventListener('keydown', (e) => {
     if (e.code === 'KeyW' || e.code === 'ArrowUp') keyState.up = true;
     if (e.code === 'KeyS' || e.code === 'ArrowDown') keyState.down = true;
@@ -1097,7 +1104,6 @@ function setupEventListeners() {
     if (e.code === 'KeyD' || e.code === 'ArrowRight') keyState.right = false;
   });
 
-  // Pausa
   const pauseBtn = document.getElementById('pause-btn');
   if (pauseBtn) pauseBtn.addEventListener('click', togglePause);
 
@@ -1233,14 +1239,8 @@ function endGame(returnToMenu = false) {
   if (overlay) overlay.style.display = 'flex';
 }
 
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
 // ==========================================================================
-// LOOP PRINCIPAL DE ANIMAÇÃO (60 FPS)
+// LOOP PRINCIPAL DE ANIMAÇÃO
 // ==========================================================================
 
 function animate() {
