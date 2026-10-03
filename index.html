@@ -3,16 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Arcade Shooter 3D - Ciclo Dia & Noite (Onda 10+) & HUD Battle Royale</title>
+  <title>Arcade Shooter 3D - Auto Rotate & HUD Layout</title>
   
-  <!-- SEO & Meta Tags -->
-  <meta name="description" content="Jogo Arcade Shooter 3D em Modo Landscape com Ciclo Dia/Noite a cada 10 Ondas, Lanterna Noturna, HUD Battle Royale, Radar e Ranking Top 10 via Firebase.">
+  <meta name="description" content="Jogo Arcade Shooter 3D em Modo Landscape com ajuste automático de orientação, radar e tempo centralizados.">
   <meta name="theme-color" content="#0a0f1e">
 
-  <!-- Estilos e Fontes -->
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Import Map para Three.js v0.160.0 -->
   <script type="importmap">
     {
       "imports": {
@@ -23,56 +20,60 @@
 </head>
 <body>
 
-  <!-- TELA DE AVISO DE ORIENTAÇÃO (MODO PORTRAIT / DISPOSITIVO EM PÉ) -->
+  <!-- TELA DE AVISO DE ORIENTAÇÃO (MODO PORTRAIT) -->
   <div id="portrait-warning">
     <div class="rotate-icon">🔄📱</div>
-    <h2>POR FAVOR, GIRE SEU DISPOSITIVO</h2>
-    <p>Este jogo foi projetado exclusivamente para o <b>Modo Horizontal (Landscape)</b>.<br>Gire o seu celular para continuar jogando!</p>
+    <h2>POR FAVOR, GIRE O DISPOSITIVO</h2>
+    <p>Este jogo roda exclusivamente no <b>Modo Horizontal (Landscape)</b>.<br>Gire o seu celular para continuar!</p>
   </div>
 
-  <!-- Canvas Container 3D -->
   <div id="canvas-container"></div>
-
-  <!-- Mira Crosshair -->
   <div id="crosshair"></div>
-
-  <!-- Notificações de Power-up / Onda / Ciclo Noturno -->
   <div id="powerup-notice">POWER UP!</div>
 
-  <!-- HUD INTERFACE COMPLETA BATTLE ROYALE (CUSTOM LANDSCAPE LAYOUT) -->
+  <!-- HUD INTERFACE COMPLETA -->
   <div id="hud">
     
     <!-- LADO ESQUERDO SUPERIOR: GATILHO SECUNDÁRIO DE TIRO -->
-    <button id="top-left-fire-btn" class="top-fire-btn" title="Gatilho Secundário">
-      🔥
-    </button>
+    <button id="top-left-fire-btn" class="top-fire-btn" title="Gatilho Secundário">🔥</button>
 
-    <!-- BARRA SUPERIOR: VIDA E ESTATÍSTICAS -->
-    <div class="top-bar-center">
-      <div class="health-card">
-        <div class="stat-label">VIDA DO CAÇADOR</div>
-        <div class="health-bar-bg">
-          <div class="health-bar-fill" id="health-fill" style="width: 100%;"></div>
-        </div>
-      </div>
-
+    <!-- PAINEL LATERAL ESQUERDO: PONTUAÇÃO & ONDA -->
+    <div class="left-hud-panel">
       <div class="stat-card">
-        <div class="stat-label">Pontuação</div>
+        <div class="stat-label">PONTUAÇÃO</div>
         <div class="stat-value" id="score-val">0</div>
       </div>
-
       <div class="stat-card">
-        <div class="stat-label">Onda (Wave)</div>
+        <div class="stat-label">ONDA</div>
         <div class="stat-value" id="wave-val">1</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-label">Tempo Restante</div>
-        <div class="stat-value" id="timer-val">60s</div>
       </div>
     </div>
 
-    <!-- CANTO SUPERIOR DIREITO: MINI-MAPA, BÚSSOLA, CICLO DIA/NOITE, FPS & PAUSA -->
+    <!-- CENTRO INFERIOR: TEMPO RESTANTE + ARMAS -->
+    <div class="bottom-center-hud">
+      <div class="timer-card">
+        <div class="stat-label">TEMPO RESTANTE</div>
+        <div class="stat-value" id="timer-val">60s</div>
+      </div>
+
+      <div class="weapon-hud-panel">
+        <div class="weapon-slot active-slot">
+          <span class="weapon-icon">🔫</span>
+          <span class="weapon-name">Espingarda 12</span>
+        </div>
+        <div class="ammo-info-group">
+          <div class="ammo-container" id="ammo-box">
+            <div class="shell"></div>
+            <div class="shell"></div>
+            <div class="shell"></div>
+            <div class="shell"></div>
+          </div>
+          <span class="ammo-status-text" id="ammo-text">4 / 4</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CANTO SUPERIOR DIREITO: MINI-MAPA RADAR & CONTROLES -->
     <div class="top-right-hud">
       <div id="minimap-container" class="minimap-box">
         <canvas id="minimap-canvas" width="105" height="105"></canvas>
@@ -86,33 +87,14 @@
       </div>
     </div>
 
-    <!-- CENTRO INFERIOR: PAINEL DE ARMAS E CARTUCHOS -->
-    <div class="weapon-hud-panel">
-      <div class="weapon-slot active-slot">
-        <span class="weapon-icon">🔫</span>
-        <span class="weapon-name">Espingarda 12</span>
-      </div>
-      <div class="ammo-info-group">
-        <div class="ammo-container" id="ammo-box">
-          <div class="shell"></div>
-          <div class="shell"></div>
-          <div class="shell"></div>
-          <div class="shell"></div>
-        </div>
-        <span class="ammo-status-text" id="ammo-text">4 / 4</span>
-      </div>
-    </div>
-
     <!-- CONTROLES VIRTUAIS TOUCH (MOBILE LANDSCAPE) -->
     <div id="touch-controls">
-      <!-- CANTO INFERIOR ESQUERDO: JOYSTICK ANALÓGICO VIRTUAL 360° -->
       <div id="joystick-zone" class="joystick-container">
         <div id="joystick-base" class="joystick-base">
           <div id="joystick-knob" class="joystick-knob"></div>
         </div>
       </div>
 
-      <!-- LADO DIREITO: BOTÕES (+100px OFFSETS, RELOAD -50px PARA BAIXO) -->
       <div id="touch-action-buttons" class="touch-actions-wrapper">
         <button id="touch-reload-btn" class="touch-btn touch-btn-reload" title="Recarregar (R)">
           🔄
@@ -129,8 +111,7 @@
   <!-- MODAL DE PAUSA -->
   <div id="pause-overlay" class="modal-overlay" style="display: none;">
     <div class="modal-box">
-      <h2 class="arcade-title" style="font-size: 26px; color: #ffeb3b;">⏸️ JOGO PAUSADO</h2>
-      <p style="margin-bottom: 20px; color: #ddd; font-size: 13px;">Selecione uma das opções abaixo:</p>
+      <h2 class="arcade-title" style="font-size: 24px; color: #ffeb3b;">⏸️ JOGO PAUSADO</h2>
       <div class="modal-buttons">
         <button id="resume-btn" class="btn-primary">▶️ CONTINUAR</button>
         <button id="restart-btn" class="btn-secondary">🔄 REINICIAR PARTIDA</button>
@@ -144,52 +125,46 @@
     <h1 class="arcade-title" id="title-text">ARCADE SHOOTER 3D</h1>
     
     <p class="arcade-desc" id="desc-text">
-      <b>Novo Sistema de Ciclo Dia & Noite!</b><br>
-      Inicia no Modo Diurno e alterna para o <b>Modo Noturno com Lanterna</b> a cada 10 Ondas (Onda 10, 20, 30...)!<br>
-      🟢 <b>Comum</b> (+10 pts) | 🔵 <b>Veloz</b> (+25 pts) | 🟡 <b>Dourado</b> (+50 pts | +5s)<br>
-      👑 <b>Super Pato Dourado</b> (+100 pts): Ativa a <b>Super Velocidade do Cão Bob</b>!<br>
+      Escolha o modo de jogo abaixo para iniciar diretamente a partida!
     </p>
 
-    <!-- SELEÇÃO DE PLATAFORMA (Menu Inicial) -->
+    <!-- SELEÇÃO DE PLATAFORMA (CLIQUE INICIA O JOGO DIRETAMENTE) -->
     <div id="platform-selection-group" class="platform-selection-container">
-      <div class="selection-label">ESCOLHA SUA PLATAFORMA DE JOGO:</div>
+      <div class="selection-label">ESCOLHA SUA PLATAFORMA PARA INICIAR:</div>
       <div class="platform-buttons-row">
         <button id="btn-mode-pc" class="btn-platform btn-pc">
           <span class="icon">💻</span>
-          <span class="text">JOGAR NO COMPUTADOR</span>
-          <span class="subtext">WASD + Mouse Esquerdo (Tiro) + R (Recarregar)</span>
+          <span class="text">COMPUTADOR</span>
+          <span class="subtext">WASD + Mouse + R</span>
         </button>
         <button id="btn-mode-mobile" class="btn-platform btn-mobile">
           <span class="icon">📱</span>
-          <span class="text">JOGAR NO CELULAR</span>
-          <span class="subtext">Modo Noturno (Onda 10+) + Radar + Joystick 360°</span>
+          <span class="text">CELULAR</span>
+          <span class="subtext">Modo Noturno + Radar + Auto-Mira</span>
         </button>
       </div>
     </div>
 
     <!-- Registro de Iniciais no Game Over -->
     <div id="name-input-group">
-      <label for="player-name-input" style="font-size: 12px; color: #ffeb3b; text-transform: uppercase; font-weight: bold; text-align: center;">
-        DIGITE SUAS 3 INICIAIS PARA O RANKING ONLINE:
+      <label for="player-name-input" style="font-size: 11px; color: #ffeb3b; font-weight: bold; text-align: center;">
+        DIGITE SUAS 3 INICIAIS:
       </label>
-      <input type="text" id="player-name-input" class="name-input" maxlength="3" placeholder="PATO" value="BOB" autocomplete="off">
+      <input type="text" id="player-name-input" class="name-input" maxlength="3" placeholder="BOB" value="BOB" autocomplete="off">
     </div>
 
-    <!-- Leaderboard Top 10 Firebase -->
+    <!-- Leaderboard Top 10 -->
     <div class="arcade-card">
       <div class="card-header">
-        <span>🏆 TOP 10 HIGH SCORES ONLINE</span>
-        <span style="font-size: 10px; color: #2ecc71;" id="status-indicator">● FIREBASE ONLINE</span>
+        <span>🏆 TOP 10 HIGH SCORES</span>
+        <span style="font-size: 10px; color: #2ecc71;" id="status-indicator">● ONLINE</span>
       </div>
       <div class="leaderboard-list" id="leaderboard-container">
-        <div style="text-align: center; color: #aaa; padding: 15px;">Carregando recordes do Firebase...</div>
+        <div style="text-align: center; color: #aaa; padding: 10px;">Carregando recordes...</div>
       </div>
     </div>
-
-    <button id="start-btn" class="btn-primary" style="display: none;">INICIAR CAÇADA</button>
   </div>
 
-  <!-- Engine do Jogo (ES6 Module) -->
   <script type="module" src="game.js"></script>
 </body>
 </html>
