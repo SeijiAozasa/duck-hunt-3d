@@ -1,61 +1,21 @@
-/**
- * firebase-config.js
- * Configuração e inicialização do Firebase JavaScript SDK v10 (Cloud Firestore)
- * com suporte a exportação ES6 Modules e fallback resiliente.
- */
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-// Insira aqui as credenciais do seu projeto no Firebase Console (https://console.firebase.google.com/)
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCd1O9w-mZLaz5J1mslvpHghyKCMUs3bcg",
   authDomain: "duck-hunt-3d.firebaseapp.com",
   projectId: "duck-hunt-3d",
   storageBucket: "duck-hunt-3d.firebasestorage.app",
   messagingSenderId: "585568046208",
-  appId: "1:585568046208:web:980893e81769957493ea65",
-  measurementId: "G-16HMBJJFJT"
+  appId: "1:585568046208:web:f6493100e3d2a46d93ea65",
+  measurementId: "G-50JR6JG0HR"
 };
 
-let app = null;
-let db = null;
-let isFirebaseAvailable = false;
-
-try {
-  // Verifica se a API Key foi configurada antes de inicializar
-  if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY")) {
-    app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    isFirebaseAvailable = true;
-    console.log("🔥 Firebase v10 SDK inicializado com sucesso!");
-  } else {
-    console.warn("⚠️ Firebase não configurado (chave demonstrativa detectada). O placar usará modo de armazenamento local (LocalStorage).");
-  }
-} catch (error) {
-  console.error("❌ Erro ao inicializar o Firebase:", error);
-  isFirebaseAvailable = false;
-}
-
-export {
-  db,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp,
-  isFirebaseAvailable
-};
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
