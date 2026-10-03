@@ -1,0 +1,15 @@
+# Ignorar tudo por padrão
+*
+
+# Incluir apenas os arquivos do projeto
+!.gitignore
+!index.html
+!README.md
+!*.js
+!*.css
+!*.json
+!*.png
+!*.jpg
+!*.svg
+!*.ico
+!*.html
