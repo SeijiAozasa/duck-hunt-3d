@@ -153,12 +153,26 @@ function endGame() {
 }
 
 // --- CARREGAMENTO INICIAL ---
-window.addEventListener('DOMContentLoaded', () => {
-  initThree();
-  setupPlatformSelectionUI();
+// Módulos ES são avaliados após o DOM estar pronto — não precisa de DOMContentLoaded
+// mas usamos o evento apenas como segurança extra.
+function init() {
+  try {
+    initThree();
+    setupPlatformSelectionUI();
 
-  const leaderboardContainer = document.getElementById('leaderboard-container');
-  subscribeTop10Scores((scores) => {
-    renderLeaderboardUI(scores, leaderboardContainer);
-  });
-});
+    const leaderboardContainer = document.getElementById('leaderboard-container');
+    subscribeTop10Scores((scores) => {
+      renderLeaderboardUI(scores, leaderboardContainer);
+    });
+
+    console.log('✅ Duck Hunt 3D: inicialização concluída.');
+  } catch (err) {
+    console.error('❌ Erro na inicialização do Duck Hunt 3D:', err);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Duck Hunt 3D - Diagnóstico</title>
+  <style>
+    body { background: #0a0f1e; color: #eee; font-family: monospace; padding: 20px; }
+    h2 { color: #ffeb3b; }
+    .ok { color: #2ecc71; }
+    .err { color: #e74c3c; }
+    .warn { color: #f39c12; }
+    pre { background: #111; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+    #log { max-height: 80vh; overflow-y: auto; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <h2>🔍 Duck Hunt 3D — Diagnóstico de Inicialização</h2>
+  <div id="log"></div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    function log(msg, type = 'ok') {
+      const pre = document.createElement('pre');
+      pre.className = type;
+      pre.textContent = '[' + new Date().toISOString().slice(11,23) + '] ' + msg;
+      logEl.appendChild(pre);
+      console.log(msg);
+    }
+
+    // Captura erros globais
+    window.addEventListener('error', (e) => {
+      log('❌ ERRO GLOBAL: ' + e.message + '\n   Arquivo: ' + e.filename + ':' + e.lineno, 'err');
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      log('❌ PROMISE REJEITADA: ' + (e.reason?.message || e.reason), 'err');
+    });
+
+    log('✅ HTML carregado, iniciando testes de módulos...', 'ok');
+  </script>
+
+  <script type="module">
+    const log = (msg, type) => {
+      const logEl = document.getElementById('log');
+      const pre = document.createElement('pre');
+      pre.className = type || 'ok';
+      pre.textContent = '[' + new Date().toISOString().slice(11,23) + '] ' + msg;
+      logEl.appendChild(pre);
+    };
+
+    log('🔄 Testando importação do Three.js via importmap...', 'warn');
+    try {
+      const THREE = await import('three');
+      log('✅ Three.js carregado! Versão: ' + THREE.REVISION, 'ok');
+
+      // Testa renderizador
+      const renderer = new THREE.WebGLRenderer();
+      log('✅ WebGLRenderer criado com sucesso!', 'ok');
+      renderer.dispose();
+    } catch (e) {
+      log('❌ Three.js FALHOU: ' + e.message, 'err');
+    }
+
+    log('🔄 Testando firebase/app...', 'warn');
+    try {
+      const { initializeApp } = await import('firebase/app');
+      log('✅ firebase/app carregado!', 'ok');
+    } catch (e) {
+      log('❌ firebase/app FALHOU: ' + e.message, 'err');
+    }
+
+    log('🔄 Testando firebase/firestore...', 'warn');
+    try {
+      const { getFirestore } = await import('firebase/firestore');
+      log('✅ firebase/firestore carregado!', 'ok');
+    } catch (e) {
+      log('❌ firebase/firestore FALHOU: ' + e.message, 'err');
+    }
+
+    log('🔄 Testando firebase/analytics...', 'warn');
+    try {
+      const { getAnalytics } = await import('firebase/analytics');
+      log('✅ firebase/analytics carregado!', 'ok');
+    } catch (e) {
+      log('❌ firebase/analytics FALHOU: ' + e.message, 'err');
+    }
+
+    log('🔄 Testando firebase-config.js local...', 'warn');
+    try {
+      const cfg = await import('./firebase-config.js');
+      log('✅ firebase-config.js carregado! isFirebaseAvailable=' + cfg.isFirebaseAvailable, 'ok');
+    } catch (e) {
+      log('❌ firebase-config.js FALHOU: ' + e.message + '\n' + e.stack, 'err');
+    }
+
+    log('🔄 Testando leaderboard.js...', 'warn');
+    try {
+      const lb = await import('./leaderboard.js');
+      log('✅ leaderboard.js carregado!', 'ok');
+    } catch (e) {
+      log('❌ leaderboard.js FALHOU: ' + e.message + '\n' + e.stack, 'err');
+    }
+
+    log('🔄 Testando game.js...', 'warn');
+    try {
+      const game = await import('./game.js');
+      log('✅ game.js carregado!', 'ok');
+    } catch (e) {
+      log('❌ game.js FALHOU: ' + e.message + '\n' + e.stack, 'err');
+    }
+
+    log('✅ Diagnóstico concluído.', 'ok');
+  </script>
+</body>
+</html>
