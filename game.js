@@ -134,7 +134,7 @@ export function startGame() {
     }
   }, 1000);
 
-  console.log(`🎮 Jogo iniciado no modo: ${controlMode}`);
+  console.log(`🎮 Duck Hunt 3D iniciado no modo: ${controlMode}`);
 }
 
 function endGame() {

@@ -21,7 +21,7 @@ try {
   analytics = getAnalytics(app);
   isFirebaseAvailable = true;
 } catch (e) {
-  console.warn("Firebase não pôde ser inicializado. O jogo rodará em modo local.", e);
+  console.warn("Firebase offline ou indisponível. Operando em modo local.", e);
   isFirebaseAvailable = false;
 }
 
