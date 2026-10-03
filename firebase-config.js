@@ -1,11 +1,7 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from "firebase/firestore";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCd1O9w-mZLaz5J1mslvpHghyKCMUs3bcg",
   authDomain: "duck-hunt-3d.firebaseapp.com",
@@ -16,6 +12,29 @@ const firebaseConfig = {
   measurementId: "G-50JR6JG0HR"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+let app, db, analytics;
+let isFirebaseAvailable = false;
+
+try {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  analytics = getAnalytics(app);
+  isFirebaseAvailable = true;
+} catch (e) {
+  console.warn("Firebase não pôde ser inicializado. O jogo rodará em modo local.", e);
+  isFirebaseAvailable = false;
+}
+
+export {
+  app,
+  db,
+  analytics,
+  isFirebaseAvailable,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
+  serverTimestamp
+};
