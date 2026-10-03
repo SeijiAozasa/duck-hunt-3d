@@ -1,46 +1,748 @@
 /* ==========================================================================
-   ESTILOS HUD REORGANIZADO & AUTO ROTATE
+   ARCADE SHOOTER 3D - STYLESHEET (HUD BATTLE ROYALE & CICLO DIA/NOITE)
    ========================================================================== */
 
-/* PAINEL LATERAL ESQUERDO: PONTUAÇÃO & ONDA */
-.left-hud-panel {
-  position: absolute;
-  top: max(12px, env(safe-area-inset-top));
-  left: max(85px, calc(env(safe-area-inset-left) + 65px));
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 10;
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Press+Start+2P&display=swap');
+
+:root {
+  --primary-color: #ffeb3b;
+  --secondary-color: #e74c3c;
+  --accent-gold: #ffd700;
+  --super-magenta: #ff007f;
+  --neon-blue: #00d2ff;
+  --health-green: #2ecc71;
+  --bg-overlay: rgba(10, 15, 30, 0.90);
+  --panel-bg: rgba(20, 25, 45, 0.85);
+  --font-arcade: 'Press Start 2P', monospace;
+  --font-ui: 'Orbitron', sans-serif;
 }
 
-/* PAINEL CENTRO INFERIOR: TEMPO + ARMAS */
-.bottom-center-hud {
-  position: absolute;
-  bottom: max(10px, env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #0a0f1e;
+  font-family: var(--font-ui);
+  touch-action: none;
+}
+
+/* ==========================================================================
+   AVISO DE ORIENTAÇÃO (MODO LANDSCAPE OBRIGATÓRIO)
+   ========================================================================== */
+
+#portrait-warning {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(10, 15, 30, 0.98);
+  backdrop-filter: blur(15px);
+  z-index: 9999;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 6px;
-  z-index: 10;
-  pointer-events: auto;
+  color: var(--primary-color);
+  text-align: center;
+  padding: 24px;
 }
 
-.timer-card {
+#portrait-warning .rotate-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: rotatePulse 2s infinite ease-in-out;
+}
+
+#portrait-warning h2 {
+  font-family: var(--font-arcade);
+  font-size: 20px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+  color: #fff;
+  text-shadow: 0 0 12px var(--primary-color);
+}
+
+#portrait-warning p {
+  font-size: 14px;
+  color: #ccc;
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+@keyframes rotatePulse {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(90deg) scale(1.15); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  #portrait-warning {
+    display: flex !important;
+  }
+}
+
+/* ==========================================================================
+   CANVAS 3D & MIRA CROSSHAIR
+   ========================================================================== */
+
+#canvas-container {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+#crosshair::before, #crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.8), 0 0 10px var(--primary-color);
+}
+#crosshair::before { top: 12px; left: 0; width: 26px; height: 2px; }
+#crosshair::after { top: 0; left: 12px; width: 2px; height: 26px; }
+
+/* ==========================================================================
+   HUD COMPLETA BATTLE ROYALE
+   ========================================================================== */
+
+#hud {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* LADO ESQUERDO SUPERIOR: GATILHO SECUNDÁRIO DE TIRO */
+.top-fire-btn {
+  pointer-events: auto;
+  position: absolute;
+  top: 15px;
+  left: 18px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(231, 76, 60, 0.45);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(231, 76, 60, 0.85);
+  color: white;
+  font-size: 22px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.5);
+  cursor: pointer;
+  z-index: 10;
+  touch-action: manipulation;
+}
+.top-fire-btn:active {
+  transform: scale(0.90);
+  background: rgba(255, 235, 59, 0.8);
+  color: #000;
+}
+
+/* BARRA SUPERIOR CENTRO */
+.top-bar-center {
+  position: absolute;
+  top: 14px;
+  left: 90px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.health-card {
   background: var(--panel-bg);
   backdrop-filter: blur(10px);
-  padding: 4px 14px;
+  padding: 6px 12px;
   border-radius: 12px;
-  border: 1px solid var(--primary-color);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+  min-width: 140px;
+}
+
+.health-bar-bg {
+  width: 100%;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-top: 3px;
+}
+
+.health-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #2ecc71, #27ae60);
+  width: 100%;
+  transition: width 0.3s ease, background 0.3s ease;
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.8);
+}
+
+.stat-card {
+  background: var(--panel-bg);
+  backdrop-filter: blur(10px);
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+  min-width: 85px;
   text-align: center;
 }
 
-.weapon-hud-panel {
+.stat-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #aaa;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--primary-color);
+  text-shadow: 0 0 8px rgba(255, 235, 59, 0.5);
+}
+
+/* CANTO SUPERIOR DIREITO: MINI-MAPA RADAR, CICLO DIA/NOITE & CONTROLES */
+.top-right-hud {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.minimap-box {
   position: relative;
-  bottom: 0;
-  left: 0;
-  transform: none;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 210, 255, 0.6);
+  background: rgba(0, 15, 30, 0.85);
+  box-shadow: 0 0 15px rgba(0, 210, 255, 0.4), 0 4px 15px rgba(0,0,0,0.6);
+  overflow: hidden;
+}
+
+#minimap-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.minimap-overlay-label {
+  position: absolute;
+  bottom: 4px;
+  width: 100%;
+  text-align: center;
+  font-size: 8px;
+  font-weight: 900;
+  color: var(--neon-blue);
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+.top-right-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.cycle-pill {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 12px;
+  letter-spacing: 1px;
+  transition: all 0.5s ease;
+  text-align: center;
+}
+
+.cycle-pill.night-mode {
+  border-color: #a855f7;
+  color: #e9d5ff;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.8);
+  background: rgba(25, 10, 45, 0.85);
+  animation: nightGlow 2s infinite alternate;
+}
+
+@keyframes nightGlow {
+  0% { box-shadow: 0 0 8px rgba(168, 85, 247, 0.4); }
+  100% { box-shadow: 0 0 18px rgba(168, 85, 247, 0.9); }
+}
+
+.fps-pill {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 255, 204, 0.5);
+  color: #00ffcc;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 12px;
+  letter-spacing: 1px;
+}
+
+.btn-pause {
+  pointer-events: auto;
+  background: rgba(231, 76, 60, 0.85);
+  border: 2px solid #e74c3c;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 18px;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+.btn-pause:active { transform: scale(0.95); background: #c0392b; }
+
+/* ==========================================================================
+   PAINEL DE ARMAS E CARTUCHOS (CENTRO INFERIOR BASE)
+   ========================================================================== */
+
+.weapon-hud-panel {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  padding: 8px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 235, 59, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 235, 59, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 10;
+}
+
+.weapon-slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.weapon-icon { font-size: 18px; }
+.weapon-name { font-size: 10px; font-weight: 800; color: #fff; }
+
+.ammo-info-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.ammo-container {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.shell {
+  width: 14px;
+  height: 34px;
+  background: linear-gradient(to right, #e74c3c, #c0392b);
+  border: 2px solid #900c3f;
+  border-radius: 3px;
+  position: relative;
+}
+
+.shell::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 7px;
+  background: linear-gradient(to right, #f1c40f, #d4ac0d);
+  border-bottom: 1px solid #b7950b;
+}
+
+.shell.spent {
+  opacity: 0.25;
+  transform: scale(0.85) translateY(4px);
+}
+
+.ammo-status-text {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--primary-color);
+  letter-spacing: 1px;
+}
+
+#powerup-notice {
+  position: absolute;
+  top: 32%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 26px; font-weight: 900;
+  color: var(--accent-gold);
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.9), 0 4px 10px rgba(0,0,0,0.9);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.5s ease;
+  pointer-events: none;
+  z-index: 20;
+  text-align: center;
+  width: 90%;
+}
+
+/* ==========================================================================
+   CONTROLES VIRTUAIS TOUCH (MOBILE LANDSCAPE)
+   ========================================================================== */
+
+#touch-controls {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* JOYSTICK ANALÓGICO VIRTUAL 360° (CANTO INFERIOR ESQUERDO) */
+.joystick-container {
+  pointer-events: auto;
+  position: absolute;
+  bottom: 55px;
+  left: 20px;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.joystick-base {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.1);
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  touch-action: none;
+}
+
+.joystick-knob {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ffeb3b, #d4ac0d);
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 235, 59, 0.8);
+  position: absolute;
+  top: calc(50% - 27px);
+  left: calc(50% - 27px);
+  pointer-events: none;
+  transition: transform 0.05s linear;
+}
+
+/* LADO DIREITO: BOTÕES (+100px OFFSETS, RELOAD REAJUSTADO 50px MAIS PARA BAIXO) */
+.touch-actions-wrapper {
+  pointer-events: auto;
+  position: absolute;
+  bottom: calc(15px + 100px);
+  right: calc(20px + 100px);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  z-index: 15;
+}
+
+.touch-btn {
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.1s ease, background 0.1s ease;
+}
+
+.touch-btn:active, .touch-btn.active {
+  background: rgba(255, 235, 59, 0.8);
+  color: #000;
+}
+
+/* BOTÃO DE RECARREGAR (RELOAD) - REAJUSTADO 50px MAIS PARA BAIXO DO TIRO PRINCIPAL */
+.touch-btn-reload {
+  width: 68px;
+  height: 68px;
+  background: rgba(231, 76, 60, 0.45);
+  border-color: rgba(231, 76, 60, 0.85);
+  font-size: 18px;
+  transform: translateY(50px);
+}
+.touch-btn-reload:active {
+  transform: translateY(50px) scale(0.90);
+}
+
+.touch-btn-fire {
+  width: 86px;
+  height: 86px;
+  background: radial-gradient(circle at 30% 30%, rgba(46, 204, 113, 0.7), rgba(39, 174, 96, 0.9));
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 20px rgba(46, 204, 113, 0.8), 0 6px 20px rgba(0,0,0,0.6);
+  font-size: 24px;
+}
+
+/* ==========================================================================
+   OVERLAYS E MODAIS DE SELEÇÃO E PAUSA
+   ========================================================================== */
+
+.modal-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  z-index: 100;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.modal-box {
+  background: var(--panel-bg);
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+}
+
+.modal-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.arcade-title {
+  font-family: var(--font-arcade);
+  font-size: 26px;
+  color: var(--primary-color);
+  text-shadow: 0 0 15px rgba(255, 235, 59, 0.8), 4px 4px 0px #d35400;
+  margin-bottom: 10px;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.arcade-desc {
+  font-size: 12px;
+  color: #ddd;
+  margin-bottom: 16px;
+  text-align: center;
+  max-width: 580px;
+  line-height: 1.5;
+}
+
+.platform-selection-container {
+  width: 100%;
+  max-width: 580px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.selection-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--neon-blue);
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.platform-buttons-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+
+.btn-platform {
+  flex: 1;
+  min-width: 200px;
+  padding: 14px 12px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+}
+
+.btn-platform .icon { font-size: 26px; }
+.btn-platform .text { font-family: var(--font-ui); font-weight: 900; font-size: 13px; }
+.btn-platform .subtext { font-size: 9px; color: #aaa; }
+
+.btn-pc:hover, .btn-pc.active {
+  background: rgba(0, 210, 255, 0.25);
+  border-color: var(--neon-blue);
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-mobile:hover, .btn-mobile.active {
+  background: rgba(255, 0, 127, 0.25);
+  border-color: var(--super-magenta);
+  box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
+  transform: translateY(-2px);
+}
+
+/* LEADERBOARD CARD */
+.arcade-card {
+  background: var(--panel-bg);
+  border-radius: 16px;
+  padding: 16px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 16px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--primary-color);
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 6px;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+}
+
+.leaderboard-row.top-rank {
+  background: rgba(255, 215, 0, 0.12);
+  border-color: rgba(255, 215, 0, 0.4);
+  font-weight: bold;
+}
+
+.rank-col { width: 30px; font-size: 14px; }
+.name-col { flex: 1; text-align: left; font-family: var(--font-arcade); font-size: 10px; color: #fff; }
+.score-col { color: var(--primary-color); font-weight: 800; }
+
+#name-input-group {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.name-input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid var(--primary-color);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-family: var(--font-arcade);
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.btn-primary {
+  padding: 14px 38px;
+  font-size: 14px;
+  font-weight: 900;
+  font-family: var(--font-ui);
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+  text-transform: uppercase;
+}
+
+.btn-secondary {
+  padding: 10px 24px;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 25px;
+  cursor: pointer;
 }
