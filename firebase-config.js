@@ -5,26 +5,27 @@
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
-  limit, 
-  onSnapshot, 
-  serverTimestamp 
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Insira aqui as credenciais do seu projeto no Firebase Console (https://console.firebase.google.com/)
 const firebaseConfig = {
-  apiKey: "AIzaSyYOUR_API_KEY_HERE",
+  apiKey: "AIzaSyCd1O9w-mZLaz5J1mslvpHghyKCMUs3bcg",
   authDomain: "duck-hunt-3d.firebaseapp.com",
   projectId: "duck-hunt-3d",
-  storageBucket: "duck-hunt-3d.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abc123def4567890"
+  storageBucket: "duck-hunt-3d.firebasestorage.app",
+  messagingSenderId: "585568046208",
+  appId: "1:585568046208:web:980893e81769957493ea65",
+  measurementId: "G-16HMBJJFJT"
 };
 
 let app = null;
@@ -46,15 +47,15 @@ try {
   isFirebaseAvailable = false;
 }
 
-export { 
-  db, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
-  limit, 
-  onSnapshot, 
-  serverTimestamp, 
-  isFirebaseAvailable 
+export {
+  db,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
+  serverTimestamp,
+  isFirebaseAvailable
 };
