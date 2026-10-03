@@ -1,7 +1,11 @@
 /**
  * game.js
  * Engine principal do Arcade Shooter 3D em Three.js
- * Suporte para Auto-Ajuste de Tela (Mobile & Desktop Responsivo) e Sensibilidade Suave para Touch.
+ * Inclui:
+ * - Movimento da arma com sensibilidade reduzida e menor recuo visual.
+ * - Sistema de Auto-Mira (Aim Assist) automático exclusivo para o modo Mobile.
+ * - Auto-Ajuste Responsivo de Ecrã.
+ * - Suporte a Ciclo Dia/Noite, Radar 2D, Audio API e Firebase Leaderboard.
  */
 
 import * as THREE from 'three';
@@ -33,12 +37,17 @@ let dogGroup, dogState = 'IDLE', dogTargetPos = null, retrievedDuckData = null;
 let legFrontLeft, legFrontRight, legBackLeft, legBackRight, tailMesh, mouthJoint;
 let dogRunSpeed = 8;
 
-// Posição da Mira e Vetor de Movimento Analógico 360°
+// Posição da Mira e Vetor de Movimento
 const crosshairPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 const mousePos = new THREE.Vector2(0, 0);
 
-// Fator de Sensibilidade Ajustado (Suaviza rotações e mira no ecrã do telemóvel)
-const LOOK_SENSITIVITY = 0.55;
+// SENSIBILIDADE DO MOVIMENTO DA CÂMARA E DA ARMA (Reduzida)
+const LOOK_SENSITIVITY = 0.35; // Sensibilidade da câmara reduzida de 0.55 para 0.35
+const GUN_RECOIL_FACTOR = 0.4; // Fator de redução do recuo da arma ao atirar
+
+// AUTO MIRA (AIM ASSIST) PARA MOBILE
+const MOBILE_AUTO_AIM_RADIUS = 0.25; // Raio de atração da auto-mira em coordenadas NDC (-1 a 1)
+const MOBILE_AUTO_AIM_STRENGTH = 0.45; // Força de interpolação em direção ao pato alvo
 
 // Vetor do Joystick Analógico Virtual 360° [-1.0, 1.0]
 const joystickVector = { x: 0, y: 0 };
@@ -49,7 +58,7 @@ let frameCount = 0;
 let lastFpsTime = performance.now();
 
 // Estado de Controles
-let controlMode = 'PC';
+let controlMode = 'PC'; // 'PC' ou 'MOBILE'
 const keyState = {
   up: false, down: false, left: false, right: false,
   w: false, a: false, s: false, d: false
@@ -201,7 +210,7 @@ function playSound(type) {
 }
 
 // ==========================================================================
-// INICIALIZAÇÃO DA CENA THREE.JS E REDIMENSIONAMENTO AUTO-AJUSTÁVEL
+// INICIALIZAÇÃO DA CENA THREE.JS E AUTO-AJUSTE
 // ==========================================================================
 
 function init() {
@@ -234,9 +243,6 @@ function init() {
   setupVirtualAnalogJoystick();
 }
 
-/**
- * Função de Auto-Ajuste Responsivo da Tela
- */
 function onWindowResize() {
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -403,6 +409,54 @@ function createHuntingDog() {
 
   dogGroup.position.set(0, 0, -12);
   scene.add(dogGroup);
+}
+
+// ==========================================================================
+// SISTEMA DE AUTO-MIRA (AIM ASSIST) PARA MÓVEL
+// ==========================================================================
+
+/**
+ * Projeta a posição 3D dos patos no ecrã (NDC) e atrai suavemente
+ * a mira na direção do pato mais próximo se estiver dentro do raio.
+ */
+function applyMobileAutoAim() {
+  if (controlMode !== 'MOBILE' || ducks.length === 0) return;
+
+  let closestDuckScreenPos = null;
+  let minDistance = MOBILE_AUTO_AIM_RADIUS;
+
+  const tempVec = new THREE.Vector3();
+
+  for (const d of ducks) {
+    if (!d.isHit && d.mesh) {
+      d.mesh.getWorldPosition(tempVec);
+      tempVec.project(camera); // Converte para NDC (-1 a 1)
+
+      // Apenas patos na frente da câmara (Z < 1)
+      if (tempVec.z < 1) {
+        const dist = Math.hypot(tempVec.x - mousePos.x, tempVec.y - mousePos.y);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestDuckScreenPos = tempVec.clone();
+        }
+      }
+    }
+  }
+
+  // Se houver um pato próximo da mira, atrai a posição da mira suavemente
+  if (closestDuckScreenPos) {
+    mousePos.x = THREE.MathUtils.lerp(mousePos.x, closestDuckScreenPos.x, MOBILE_AUTO_AIM_STRENGTH);
+    mousePos.y = THREE.MathUtils.lerp(mousePos.y, closestDuckScreenPos.y, MOBILE_AUTO_AIM_STRENGTH);
+
+    crosshairPos.x = ((mousePos.x + 1) / 2) * window.innerWidth;
+    crosshairPos.y = ((-mousePos.y + 1) / 2) * window.innerHeight;
+
+    const crosshair = document.getElementById('crosshair');
+    if (crosshair) {
+      crosshair.style.left = crosshairPos.x + 'px';
+      crosshair.style.top = crosshairPos.y + 'px';
+    }
+  }
 }
 
 // ==========================================================================
@@ -608,7 +662,7 @@ function setupVirtualAnalogJoystick() {
 }
 
 // ==========================================================================
-// SELEÇÃO DE PLATAFORMA (PC / CELULAR LANDSCAPE)
+// SELEÇÃO DE PLATAFORMA
 // ==========================================================================
 
 function setupPlatformSelectionUI() {
@@ -638,7 +692,7 @@ function setupPlatformSelectionUI() {
       if (touchControls) touchControls.style.display = 'flex';
       if (startBtn) {
         startBtn.style.display = 'inline-block';
-        startBtn.innerText = '📱 INICIAR MODO TELEMÓVEL (LANDSCAPE)';
+        startBtn.innerText = '📱 INICIAR MODO TELEMÓVEL (AUTO-MIRA)';
       }
     });
   }
@@ -750,7 +804,7 @@ function createDuck() {
 }
 
 // ==========================================================================
-// TIRO, RECARGA E COLISÃO (RAYCASTING)
+// TIRO, RECARGA E COLISÃO (RECUO E SENSIBILIDADE DA ARMA AJUSTADOS)
 // ==========================================================================
 
 function shoot(targetX, targetY) {
@@ -761,8 +815,9 @@ function shoot(targetX, targetY) {
   playSound('shotgun');
 
   muzzleFlash.material.opacity = 1.0;
-  shotgunGroup.position.z += 0.15;
-  shotgunGroup.rotation.x += 0.2;
+  // Recuo visual da arma reduzido
+  shotgunGroup.position.z += 0.08 * GUN_RECOIL_FACTOR;
+  shotgunGroup.rotation.x += 0.1 * GUN_RECOIL_FACTOR;
 
   setTimeout(() => { muzzleFlash.material.opacity = 0; }, 50);
 
@@ -810,8 +865,8 @@ function reload() {
   updateAmmoUI();
   playSound('reload');
 
-  shotgunGroup.rotation.z = -0.4;
-  setTimeout(() => { shotgunGroup.rotation.z = 0; }, 300);
+  shotgunGroup.rotation.z = -0.25;
+  setTimeout(() => { shotgunGroup.rotation.z = 0; }, 250);
 }
 
 function applyPlayerDamage(amount) {
@@ -989,7 +1044,7 @@ function updateDogBehavior(delta, time) {
 }
 
 // ==========================================================================
-// PROCESSAMENTO DE MIRA E MOVIMENTO COM FATOR DE SENSIBILIDADE (LOOK_SENSITIVITY)
+// PROCESSAMENTO DE MIRA E MOVIMENTO
 // ==========================================================================
 
 function updateCrosshairDOM() {
@@ -1002,7 +1057,7 @@ function updateCrosshairDOM() {
   mousePos.x = (crosshairPos.x / window.innerWidth) * 2 - 1;
   mousePos.y = -(crosshairPos.y / window.innerHeight) * 2 + 1;
 
-  // Aplicação da rotação suavizada com o LOOK_SENSITIVITY
+  // Rotação da câmara suavizada
   camera.rotation.y = -mousePos.x * 1.3 * LOOK_SENSITIVITY;
   camera.rotation.x = mousePos.y * 1.3 * LOOK_SENSITIVITY;
 }
@@ -1010,7 +1065,7 @@ function updateCrosshairDOM() {
 function processInputMovement(delta) {
   if (!gameActive || isPaused) return;
 
-  const moveSpeed = 650 * delta;
+  const moveSpeed = 500 * delta; // Velocidade da mira ajustada
   let moveX = 0;
   let moveY = 0;
 
@@ -1032,7 +1087,6 @@ function processInputMovement(delta) {
 }
 
 function setupEventListeners() {
-  // Evento de auto-ajuste de ecrã ao redimensionar ou rodar o telemóvel
   window.addEventListener('resize', onWindowResize);
 
   document.addEventListener('mousemove', (e) => {
@@ -1251,12 +1305,17 @@ function animate() {
 
   if (gameActive && !isPaused) {
     processInputMovement(delta);
+
+    // Ativa a auto-mira no modo móvel
+    applyMobileAutoAim();
+
     processEnvironmentTransition(delta);
     updateFpsCounter();
     renderMinimap();
 
-    shotgunGroup.position.z = THREE.MathUtils.lerp(shotgunGroup.position.z, -0.6, 0.1);
-    shotgunGroup.rotation.x = THREE.MathUtils.lerp(shotgunGroup.rotation.x, 0, 0.1);
+    // Suavização do retorno da arma ao disparar (Menos tranco)
+    shotgunGroup.position.z = THREE.MathUtils.lerp(shotgunGroup.position.z, -0.6, 0.15);
+    shotgunGroup.rotation.x = THREE.MathUtils.lerp(shotgunGroup.rotation.x, 0, 0.15);
 
     updateDogBehavior(delta, time);
 
