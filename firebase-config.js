@@ -1,40 +1,60 @@
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from "firebase/firestore";
+/**
+ * firebase-config.js
+ * Configuração e inicialização do Firebase JavaScript SDK v10 (Cloud Firestore)
+ * com suporte a exportação ES6 Modules e fallback resiliente.
+ */
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query, 
+  orderBy, 
+  limit, 
+  onSnapshot, 
+  serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Insira aqui as credenciais do seu projeto no Firebase Console (https://console.firebase.google.com/)
 const firebaseConfig = {
-  apiKey: "AIzaSyCd1O9w-mZLaz5J1mslvpHghyKCMUs3bcg",
+  apiKey: "AIzaSyYOUR_API_KEY_HERE",
   authDomain: "duck-hunt-3d.firebaseapp.com",
   projectId: "duck-hunt-3d",
-  storageBucket: "duck-hunt-3d.firebasestorage.app",
-  messagingSenderId: "585568046208",
-  appId: "1:585568046208:web:f6493100e3d2a46d93ea65",
-  measurementId: "G-50JR6JG0HR"
+  storageBucket: "duck-hunt-3d.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abc123def4567890"
 };
 
-let app, db, analytics;
+let app = null;
+let db = null;
 let isFirebaseAvailable = false;
 
 try {
-  app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
-  analytics = getAnalytics(app);
-  isFirebaseAvailable = true;
-} catch (e) {
-  console.warn("Firebase offline ou indisponível. Operando em modo local.", e);
+  // Verifica se a API Key foi configurada antes de inicializar
+  if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY")) {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    isFirebaseAvailable = true;
+    console.log("🔥 Firebase v10 SDK inicializado com sucesso!");
+  } else {
+    console.warn("⚠️ Firebase não configurado (chave demonstrativa detectada). O placar usará modo de armazenamento local (LocalStorage).");
+  }
+} catch (error) {
+  console.error("❌ Erro ao inicializar o Firebase:", error);
   isFirebaseAvailable = false;
 }
 
-export {
-  app,
-  db,
-  analytics,
-  isFirebaseAvailable,
-  collection,
-  addDoc,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp
+export { 
+  db, 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query, 
+  orderBy, 
+  limit, 
+  onSnapshot, 
+  serverTimestamp, 
+  isFirebaseAvailable 
 };
