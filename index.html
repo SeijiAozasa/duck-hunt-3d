@@ -260,7 +260,7 @@
   <script type="module">
     import * as THREE from 'three';
     import { initializeApp } from 'firebase/app';
-    import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
+    import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 
     // Configuração do Firebase com Verificação Segura & Fallback Offline Automático
     const firebaseConfig = {
@@ -436,8 +436,20 @@
       }
     }
 
+    function getCurrentMonthString() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      return `${y}-${m}`;
+    }
+
     async function loadLeaderboard() {
       const tbody = document.getElementById('leaderboard-body');
+      const titleElem = document.querySelector('.leaderboard-title');
+      const currentMonth = getCurrentMonthString();
+      if (titleElem) {
+        titleElem.innerText = `=== TOP 10 HALL OF FAME [TEMPORADA ${currentMonth}] ===`;
+      }
       tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">CARREGANDO RANKING...</td></tr>';
 
       if (!db) {
@@ -446,20 +458,30 @@
       }
 
       try {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const scoresRef = collection(db, "monthly_scores");
+        let scores = [];
 
-        const scoresRef = collection(db, "highscores");
-        const q = query(scoresRef, orderBy("score", "desc"), limit(10));
-        const querySnapshot = await getDocs(q);
-
-        const scores = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.timestamp && data.timestamp.toDate() >= startOfMonth) {
-            scores.push(data);
-          }
-        });
+        try {
+          const q = query(
+            scoresRef,
+            where("month", "==", currentMonth),
+            orderBy("score", "desc"),
+            limit(10)
+          );
+          const querySnapshot = await getDocs(q);
+          querySnapshot.forEach((doc) => {
+            scores.push(doc.data());
+          });
+        } catch (queryErr) {
+          console.warn("Consulta composta com índice pendente. Utilizando busca de contingência:", queryErr);
+          const qFallback = query(scoresRef, where("month", "==", currentMonth), limit(50));
+          const querySnapshot = await getDocs(qFallback);
+          querySnapshot.forEach((doc) => {
+            scores.push(doc.data());
+          });
+          scores.sort((a, b) => (b.score || 0) - (a.score || 0));
+          scores = scores.slice(0, 10);
+        }
 
         if (scores.length > 0) {
           renderLeaderboard(scores);
@@ -495,12 +517,14 @@
     async function saveScore() {
       const initialsInput = document.getElementById('player-initials');
       const name = (initialsInput.value.trim().toUpperCase() || "AAA").slice(0, 3);
+      const currentMonth = getCurrentMonthString();
 
       if (db) {
         try {
-          await addDoc(collection(db, "highscores"), {
+          await addDoc(collection(db, "monthly_scores"), {
             name: name,
             score: score,
+            month: currentMonth,
             timestamp: Timestamp.now()
           });
         } catch (e) {

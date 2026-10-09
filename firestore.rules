@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Coleção de pontuações ativas do mês corrente
+    match /monthly_scores/{scoreId} {
+      // Qualquer jogador pode consultar o ranking do mês
+      allow read: if true;
+      
+      // Validação básica para inserção de nova pontuação
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.name.size() <= 3
+                    && request.resource.data.score is number
+                    && request.resource.data.score >= 0
+                    && request.resource.data.month is string;
+                    
+      // Bloqueia edições e exclusões manuais do lado do cliente (apenas Cloud Functions limpa/reseta)
+      allow update, delete: if false;
+    }
+    
+    // Coleção histórica dos meses anteriores arquivados pelo Cloud Function
+    match /historical_rankings/{monthId} {
+      allow read: if true;
+      allow write: if false; // Apenas o backend (Admin SDK) escreve
+    }
+  }
+}
