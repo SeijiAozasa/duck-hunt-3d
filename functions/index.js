@@ -32,6 +32,16 @@ function getPreviousMonthString() {
   return now.toISOString().slice(0, 7); // ex: "2026-09"
 }
 
+function escapeHtml(str) {
+  return String(str || "").replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[m]));
+}
+
 /**
  * Monta o HTML do E-mail com estética Retro Arcade dos Anos 90
  */
@@ -45,11 +55,12 @@ function buildArcadeEmailTemplate(monthStr, topScores) {
       const pos = index + 1;
       const medal = pos === 1 ? "🥇 1º LUGAR" : (pos === 2 ? "🥈 2º LUGAR" : (pos === 3 ? "🥉 3º LUGAR" : `${pos}º`));
       const rowColor = pos === 1 ? "#ffd700" : (pos === 2 ? "#c0c0c0" : (pos === 3 ? "#cd7f32" : "#ffffff"));
+      const safeName = escapeHtml(item.name || "ANÔNIMO");
       
       rowsHtml += `
         <tr style="border-bottom: 1px solid #333;">
           <td style="padding: 10px; font-weight: bold; color: ${rowColor};">${medal}</td>
-          <td style="padding: 10px; color: #ffffff;">${item.name || "ANÔNIMO"}</td>
+          <td style="padding: 10px; color: #ffffff;">${safeName}</td>
           <td style="padding: 10px; color: #00e436; font-family: monospace; font-size: 16px;">${String(item.score).padStart(6, "0")}</td>
           <td style="padding: 10px; color: #29adff;">${item.accuracy || 100}% (Round ${item.round || 1})</td>
         </tr>
@@ -209,6 +220,17 @@ exports.monthlyRankingResetCron = functions.pubsub
  * Exemplo de chamada: GET/POST https://<region>-<project>.cloudfunctions.net/manualMonthlyReset?month=2026-09
  */
 exports.manualMonthlyReset = functions.https.onRequest(async (req, res) => {
+  // Proteção de segurança: exige chave secreta de administrador para evitar resets indevidos
+  const providedKey = req.query.key || req.headers["x-admin-key"] || req.body.key;
+  const configuredSecret = process.env.ADMIN_SECRET_KEY;
+
+  if (configuredSecret && providedKey !== configuredSecret) {
+    functions.logger.warn("Tentativa de acesso não autorizado ao reset manual.");
+    return res.status(403).json({
+      error: "Acesso negado: Chave de administração inválida ou ausente.",
+    });
+  }
+
   try {
     const targetMonth = req.query.month || req.body.month;
     const result = await executeMonthlyRankingCycle(targetMonth);

@@ -1,27 +1,43 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    // Bloqueio padrão para qualquer coleção não declarada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
     // Coleção de pontuações ativas do mês corrente
     match /monthly_scores/{scoreId} {
-      // Qualquer jogador pode consultar o ranking do mês
+      // Leitura pública permitida para exibir o ranking no arcade
       allow read: if true;
-      
-      // Validação básica para inserção de nova pontuação
-      allow create: if request.resource.data.name is string
-                    && request.resource.data.name.size() <= 3
+
+      // Validação rigorosa para inserção de nova pontuação:
+      // 1. Apenas os campos permitidos: name, score, month, timestamp
+      // 2. Iniciais: exatamente 1 a 3 caracteres alfanuméricos maiúsculos (previne XSS e injeção de caracteres)
+      // 3. Pontuação: número inteiro entre 0 e 50.000 pontos (teto realista de uma partida arcade)
+      // 4. Mês: formato estrito YYYY-MM
+      // 5. Timestamp: deve ser um timestamp válido do servidor ou recente
+      allow create: if request.resource.data.keys().hasOnly(['name', 'score', 'month', 'timestamp'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.matches('^[A-Z0-9]{1,3}$')
                     && request.resource.data.score is number
                     && request.resource.data.score >= 0
-                    && request.resource.data.month is string;
-                    
-      // Bloqueia edições e exclusões manuais do lado do cliente (apenas Cloud Functions limpa/reseta)
+                    && request.resource.data.score <= 50000
+                    && request.resource.data.month is string
+                    && request.resource.data.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+                    && request.resource.data.timestamp is timestamp;
+
+      // Bloqueio total de edição e exclusão pelo frontend (apenas Cloud Function Admin SDK pode alterar/limpar)
       allow update, delete: if false;
     }
-    
+
     // Coleção histórica dos meses anteriores arquivados pelo Cloud Function
     match /historical_rankings/{monthId} {
+      // Leitura pública para consulta de histórico
       allow read: if true;
-      allow write: if false; // Apenas o backend (Admin SDK) escreve
+      // Ninguém pelo client pode alterar o arquivo histórico
+      allow write: if false;
     }
   }
 }
